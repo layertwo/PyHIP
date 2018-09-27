@@ -1,0 +1,191 @@
+    Installation Instructions
+
+Warning: these do not exactly match the current state of the code.
+
+You will need two systems or virtualised hosts (VMWare or user mode
+linux, for instance) with the following stuff, which should be installed
+in the order I list them:
+
+A 2.4-based linux with the iptables utilities and kernel modules for
+both IPv4 and IPv6. I've tested on RedHat 7.2, 7.3, 8.0 and 9.0
+using various 2.4.9 and later kernels. An SMP system is fine, I have
+tested that. Non-Intel CPUs should also be fine, barring library
+compilation problems.  Note that RedHat kernels other than 8.x
+(earlier OR later) will need some modules compiled.
+
+These hosts should not rely on being able to connect to 1.x.x.x IP
+addresses, as the HIP daemon uses that subnet for its LSIs at present,
+and will route all traffic to those addresses to itself...
+
+Python 2.2 or later (2.2.x or a 2.3 beta work). RedHat 7.2 must be
+updated, but everything other than IPv6 will work with the Python
+distributed with 7.3 or later. IPv6 support in Python is necessary if
+you want to use it. RPMs of python before RedHat 8.0 are compiled
+without IPv6 support, so you may want to get the SRPMs and edit the
+specfile to add that, or compile from source.
+
+Required libraries:
+
+swig from http://www.swig.org/ may be required in order to compile some
+of the following python libraries.
+
+pycrypto. I used version 1.9a3.
+
+IPy for IP address manipulation (particularly IPv6).
+
+The psyco python JIT compiler. This is not essential, but you really
+want this for performance.
+
+libnet from http://www.packetfactory.net/libnet/
+
+pylibnet from http://pylibnet.sourceforge.net/
+
+libipq and pylibipq.  libipq is from the netfilter userspace tools
+distribution.  There is a patched version of pylibipq in the
+distribution for this package. (The patch enables python thread
+scheduling around a blocking system call, and is necessary).
+
+
+    Operation Instructions
+
+Ok, how to run it.
+
+Unpack and change into the hip directory created.
+
+Firstly, create a host key on each host with:
+
+python2 HI.py -w $hostname.hi 
+
+($hostname is whatever you're going to call the machine; it need not
+actually be the hostname, although you will have to specify the IP
+address of the host later in that case)
+
+Then run the daemon with:
+
+python2 hipd.py -k $hostname.hi -h $hostname -6
+
+or alternatively
+
+python2 hipd.py -k $hostname.hi -h $local_ip_address -6
+
+Add the flag -6 for IPv6 support.  (At present, this is mandatory, and
+the flag may some day go away)
+
+At this point it's accepting connections, but you don't yet have any way
+to actually make one.
+
+There will be interesting stuff in the routing tables and firewall
+rules at this point.
+
+So, with the daemon running:
+
+python2 ./hipctl.py 
+
+then type a command like:
+
+write myhost.hirr 
+ done 
+
+This will write a public key host identity file called myhost.hirr, in
+the working directory of hipctl.
+
+Somehow transfer the .hirr to another host with the HIP stuff installed,
+then, on that host:
+
+python2 ./hipctl.py -c myhost -f myhost.hirr 
+
+Bingo! It connects, the daemons produce screeds of debugging output, and
+the hipctl command outputs the LSI, which you can then talk to using
+telnet, a web browser, or whatever.  You also can write a HIT in IPv6
+format and connect with an IPv6 application.  This may even work if
+the far end is another implementation that only speaks IPv4, but so
+far we have not tested these cases.
+
+The argument to the -c can be: a hostname, in which case that will be
+looked up and connected to via IPv6 if that is enabled and a v6 address
+returned from the lookup, else IPv4, or an IP address (either v4 or v6)
+in ascii form, in which case connection will be attempted directly. IPv6
+addresses can be compressed with :: as usual, and scoped with the form
+(for example): fe80::1%eth0
+
+
+    Code Structure
+
+Some notes on what's going on in those files:
+
+* hip/hipctl.py
+
+Control program, connects to the daemon through a unix domain socket at
+/tmp/hipd
+
+* hip/hipd.py
+
+HIP daemon; contains all the socket code, dispatchers and main event loop
+
+Basically procedural code, very messy and sorely in need of factoring
+out into classes.
+
+    * hip/ESP.py
+* hip/testESP.py
+
+ESP implementation.
+
+* hip/DH.py
+
+Diffie-Hellman key exchange, cribbed from ?
+</indranet-wiki/ElGamal>ElGamal.py in the pycrypto distribution.
+
+    * hip/HIPMessage.py
+* hip/testHIPMessage.py
+
+draft-05 Appendix A packet format encoders and decoders, one class per
+packet.
+
+Some of the first code I wrote in this, and it sort of shows. Probably
+no longer works.
+
+    * hip/HIP? </indranet-wiki/OptMessage>OptMessage.py
+* hip/testHIP? </indranet-wiki/OptMessage>OptMessage.py
+
+Packets for draft-moskowitz-hip-07, format originally due to Petri
+Jokela. Much more OO code, and should be far more efficient as the
+format is more regular and easier to parse.
+
+    * hip/HIPState.py
+* hip/testHIPState.py
+
+The state machine, on a pattern cribbed from the Python Cookbook. Watch
+out, python objects (values) have type but variables do not. *State
+objects get switched around all the time...
+
+* hip/HIPutils.py
+
+Various functions and values used in several places. Tested along with
+HIPState.
+
+    * hip/HI.py
+* hip/testHI.py
+
+Host Identity load/save/sign/encode/decode stuff.
+
+* hip/sstruct.py
+
+small library, somewhat patched
+
+* hip/testConversation.py
+
+Tests; instantiates two statemachines and has them do the four-packet
+dance, then test the other packets as well. Only test which covers
+packet input methods.
+
+In each case, the testWhatever.py files are scripts that can be run to
+exercise the file they go along with. Each should report OK as the last
+line of output (along with copious debug messages), or else will produce
+a collection of backtraces reporting on the failed tests. All these run
+with no errors or warnings on my system.
+
+ * hip/testall.py
+
+Test everything (theoretically there should be no errors or failures,
+but in some releases tests may be broken, even if the release
+actually works.  Sorry.).
