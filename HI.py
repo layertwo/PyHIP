@@ -34,17 +34,9 @@ class HI:
             self.dsa = DSA.construct(List)
         else:
             self.dsa = DSA.generate(Size, HIPutils.RandomPool.get_bytes)
-# try:
-# print 'y = ', hex(self.dsa.y), len(long_to_bytes(self.dsa.y))
-# print 'p = ', hex(self.dsa.p), len(long_to_bytes(self.dsa.p))
-# print 'g = ', hex(self.dsa.g), len(long_to_bytes(self.dsa.g))
-# print 'q = ', hex(self.dsa.q), len(long_to_bytes(self.dsa.q))
-# except:
-# pass
 
     def genKey(self):
         pass
-        # self.dsa.generate()
 
     def packDSA(self):
         # RFC2536: t=len(p)/64-1
@@ -56,20 +48,16 @@ class HI:
         l = len(p)
         t = int((l - 64) / 8)
         pad = '\x00' * (l)
-        return ''.join([chr(t),q[:l], pad[:-len(p)], p[:l], pad[:-len(g)], g[:l], pad[:-len(y)], str(y[:l])])
+        return ''.join([chr(t), str(q[:l]), pad[:-len(p)], str(p[:l]), pad[:-len(g)], str(g[:l]), pad[:-len(y)], str(y[:l])])
 
     def pack(self):
         # RFC2535: 0x0200 flags,
         #          0xff protocol (or IANA HIP value)
         #          0x03 algorithm DSA (mandatory)
-        RR = ''.join(['\x02\x00\xff\x03',
-                      self.packDSA()])
-        # print 'len RR', len(RR)
-        return RR
+        # TODO confirm this is correct
+        return ''.join(['\x02\x00\xff\x03', self.packDSA()])
 
     def unpackDSA(self, string):
-        # print 'unpackDSA', len(string), binascii.hexlify(string)
-        #t = 64 * (ord(string[0])+1)
         t = (ord(string[0]) * 8 + 64)
         if (len(string) != (1 + 20 + (3 * t))):
             raise ValueError('HI: got RR length %d expecting %d' %
@@ -208,23 +196,23 @@ if __name__ == "__main__":
             filename = args.write
             print('Writing new HI to:', filename)
             hi = HI()
-            print(repr(hi))
             pickle.dump([hi.dsa.y,
                          hi.dsa.g,
                          hi.dsa.p,
                          hi.dsa.q,
                          hi.dsa.x], open(filename, 'wb'))
-            print('HIT is', binascii.hexlify(hi.HIT127()))
-            print('RR is', binascii.hexlify(hi.pack()))
-            print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
-            print('p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p)))
-            print('g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g)))
-            print('q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q)))
+            # TODO RR should be bytes on str at this point
+            print('HIT is {}'.format(binascii.hexlify(hi.HIT127())))
+            print('RR is {}'.format(hi.pack()))
+            print('y = {}, len = {}'.format(hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y))))
+            print('p = {}, len = {}'.format(hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p))))
+            print('g = {}, len = {}'.format(hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g))))
+            print('q = {}, len = {}'.format(hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q))))
 
         if args.read:
             filename = args.read
             print('Reading HI from', filename)
-            rec = open(filename, 'r').read().strip()
+            rec = open(filename, 'rb').read().strip()
             hi = HI(Rec=binascii.unhexlify(rec))
             print('HIT is', binascii.hexlify(hi.HIT127()))
             print('RR is', binascii.hexlify(hi.pack()))
