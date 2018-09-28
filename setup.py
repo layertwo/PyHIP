@@ -3,9 +3,9 @@ from distutils.extension import Extension
 from Pyrex.Distutils import build_ext
 
 setup(
-  name = 'Demos',
-  ext_modules=[ 
-    Extension("PyrexUtils", ["PyrexUtils.pyx"]),
+    name='Demos',
+    ext_modules=[
+        Extension("PyrexUtils", ["PyrexUtils.pyx"]),
     ],
-  cmdclass = {'build_ext': build_ext}
+    cmdclass={'build_ext': build_ext}
 )

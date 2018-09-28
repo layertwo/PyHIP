@@ -11,12 +11,13 @@ import time
 from binascii import *
 from cmd import Cmd
 
+
 class hipctl(Cmd):
     def __init__(self):
         self.prompt = 'hip> '
         self.sk = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sk.connect('/tmp/hipd')
-    
+
     def default(self, line):
         self.sk.send(line)
         print(self.sk.recv(2000))
@@ -58,7 +59,7 @@ class hipctl(Cmd):
             try:
                 f = file(filename, 'r')
                 rr = f.read()
-            except:
+            except BaseException:
                 rr = ''
         else:
             rr = ''
@@ -67,7 +68,7 @@ class hipctl(Cmd):
         print(self.sk.recv(2000))
         if len(l) > 1:
             print(self.sk.recv(2000))
-        
+
     def do_loadhi(self, line):
         try:
             l = string.split(line)
@@ -86,7 +87,6 @@ class hipctl(Cmd):
         print(self.sk.recv(2000))
 
 
-
 def main():
     opts, args = getopt(sys.argv[1:], 'c:f:t:l', ['connect=',
                                                   'file=',
@@ -98,7 +98,7 @@ def main():
     h = hipctl()
     hit = '.'
     file = '.'
-    
+
     for opt, val in opts:
         if opt in ('-c', '--connect'):
             connect = val
@@ -120,4 +120,4 @@ def main():
 
 
 if __name__ == "__main__":
-	main()
+    main()
