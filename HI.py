@@ -54,15 +54,9 @@ class HI:
         g = long_to_bytes(self.dsa.g)
         y = long_to_bytes(self.dsa.y)
         l = len(p)
-        t = (l - 64) / 8
+        t = int((l - 64) / 8)
         pad = '\x00' * (l)
-        RR = ''.join([chr(t),
-                      q[:l],
-                      pad[:-len(p)], p[:l],
-                      pad[:-len(g)], g[:l],
-                      pad[:-len(y)], y[:l]])
-        # print 'len RR', len(RR)
-        return RR
+        return ''.join([chr(t),q[:l], pad[:-len(p)], p[:l], pad[:-len(g)], g[:l], pad[:-len(y)], str(y[:l])])
 
     def pack(self):
         # RFC2535: 0x0200 flags,
@@ -200,52 +194,53 @@ class HI:
 
 if __name__ == "__main__":
     def main():
-        from getopt import getopt
+        import argparse
         import sys
 
-        opts, args = getopt(sys.argv[1:],
-                            'w:r:h:',
-                            ['write=',
-                             'read=',
-                             'hostkey='])
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-w', '--write', help='write HI to file')
+        parser.add_argument('-r', '--read', help='read HI from file')
+        parser.add_argument('-hk', '--hostkey', help='read HI val')
 
-        for opt, val in opts:
-            if opt in ('-w', '--write'):
-                filename = val
-                print('Writing new HI to:', filename)
-                hi = HI()
-                print(repr(hi))
-                pickle.dump([hi.dsa.y,
-                             hi.dsa.g,
-                             hi.dsa.p,
-                             hi.dsa.q,
-                             hi.dsa.x], open(filename, 'wb'))
-                print('HIT is', binascii.hexlify(hi.HIT127()))
-                print('RR is', binascii.hexlify(hi.pack()))
-                print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
-                print('p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p)))
-                print('g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g)))
-                print('q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q)))
-            if opt in ('-r', '--read'):
-                filename = val
-                print('Reading HI from', filename)
-                rec = open(filename, 'r').read().strip()
-                hi = HI(Rec=binascii.unhexlify(rec))
-                print('HIT is', binascii.hexlify(hi.HIT127()))
-                print('RR is', binascii.hexlify(hi.pack()))
-                print('y = ', hi.dsa.y)
-                print('p = ', hi.dsa.p)
-                print('g = ', hi.dsa.g)
-                print('q = ', hi.dsa.q)
-            if opt in ('-h', '--hostkey'):
-                print('Reading HI from', val)
-                hi = HI(val)
-                print('HIT is', binascii.hexlify(hi.HIT127()))
-                print('RR is', binascii.hexlify(hi.pack()))
-                print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
-                print('p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p)))
-                print('g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g)))
-                print('q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q)))
-        pass
+        args = parser.parse_args()
+
+        if args.write:
+            filename = args.write
+            print('Writing new HI to:', filename)
+            hi = HI()
+            print(repr(hi))
+            pickle.dump([hi.dsa.y,
+                         hi.dsa.g,
+                         hi.dsa.p,
+                         hi.dsa.q,
+                         hi.dsa.x], open(filename, 'wb'))
+            print('HIT is', binascii.hexlify(hi.HIT127()))
+            print('RR is', binascii.hexlify(hi.pack()))
+            print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
+            print('p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p)))
+            print('g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g)))
+            print('q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q)))
+
+        if args.read:
+            filename = args.read
+            print('Reading HI from', filename)
+            rec = open(filename, 'r').read().strip()
+            hi = HI(Rec=binascii.unhexlify(rec))
+            print('HIT is', binascii.hexlify(hi.HIT127()))
+            print('RR is', binascii.hexlify(hi.pack()))
+            print('y = ', hi.dsa.y)
+            print('p = ', hi.dsa.p)
+            print('g = ', hi.dsa.g)
+            print('q = ', hi.dsa.q)
+
+        if args.hostkey:
+            print('Reading HI from', args.hostkey)
+            hi = HI(args.hostkey)
+            print('HIT is', binascii.hexlify(hi.HIT127()))
+            print('RR is', binascii.hexlify(hi.pack()))
+            print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
+            print('p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p)))
+            print('g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g)))
+            print('q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q)))
 
     main()
