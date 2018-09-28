@@ -57,7 +57,7 @@ def construct(tuple):
     
     obj=DHobj()
     if len(tuple) not in [2, 3, 4]:
-        raise error, 'argument for construct() wrong length' 
+        raise error('argument for construct() wrong length') 
     for i in range(len(tuple)):
 	field = obj.keydata[i]
 	setattr(obj, field, tuple[i])
@@ -88,24 +88,24 @@ class DHobj(pubkey):
 
     def _encrypt(self, M, K):
 	if (not hasattr(self, 'x')):
-	    raise error, 'Private key not available in this object'
+	    raise error('Private key not available in this object')
 	return self.y
 
     def _decrypt(self, M):
 	if (not hasattr(self, 'x')):
-	    raise error, 'Private key not available in this object'
+	    raise error('Private key not available in this object')
         ax=pow(M[0], self.x, self.p)
 	return ax
 
     def _sign(self, M, K):
-        raise error, 'Signing not available in this object'
+        raise error('Signing not available in this object')
 
     def _verify(self, M, sig):
-        raise error, 'Signing not available in this object'
+        raise error('Signing not available in this object')
         
     def size(self):
 	"Return the maximum number of bits that can be handled by this key."
-        bits, power = 0,1L
+        bits, power = 0,1
 	while (power<self.p): bits, power = bits+1, power<<1
 	return bits-1
 	

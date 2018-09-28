@@ -12,7 +12,7 @@ class Memoize:
         self.fn = fn
         self.memo = {}
     def __call__(self, *args):
-        if not self.memo.has_key(args):
+        if args not in self.memo:
             self.memo[args] = self.fn(*args)
         return self.memo[args]
 
@@ -105,7 +105,7 @@ class IP:
                  it):
         if type(it) == type(self):
             it = it.Number
-        if type(it) == types.TupleType:
+        if type(it) == tuple:
             it = it[0]
         try:
             self.IP = IPy.IP(it)
@@ -118,7 +118,7 @@ class IP:
                                      + [self.Netstring])
         self.Addrinfo = socket.getaddrinfo(self.String, None)[0][-1:][0]
         self.Version = self.IP.version()
-        self.Reserved = 0L
+        self.Reserved = 0
 
         #__init__ = Memoize(__init__)
 

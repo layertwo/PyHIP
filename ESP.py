@@ -19,12 +19,12 @@ import threading
 import libnet
 import os
 import socket
-import Queue
+import queue
 
 
 enc=1
 dec=0
-padblock = ''.join(map(chr, range(1, 200)))
+padblock = ''.join(map(chr, list(range(1, 200))))
 
 def ESPparams(payload):
     return struct.unpack('!LL', payload[:8])
@@ -39,7 +39,7 @@ class ESPUnpackError(ESPError):
     def __init__(self, value):
         self.value = value
     def __str__(self):
-        return `self.value`
+        return repr(self.value)
 
 class ESPTransform(HIPutils.Transform):
     pass
@@ -167,8 +167,8 @@ class InputEngine(HIPutils.IPhandler):
                 #print "--->", time.time() - c, 'for ESP deliver construction'
             #print "delivering", hexlify(pkt2)
             OutQueue.put(pkt2)
-        except ESP.ESPUnpackError, x:
-            print 'Unpack error:', x                
+        except ESP.ESPUnpackError as x:
+            print('Unpack error:', x)                
         except KeyError:
             #traceback.print_exc()
             #print 'nope. Not our packet...'
@@ -273,7 +273,7 @@ class SPI:
 
     def unhold(self, holdlist):
         #heldData = map(lambda x: apply(self.pack, x), holdlist)
-        heldData = [apply(self.pack,x) for x in holdlist]
+        heldData = [self.pack(*x) for x in holdlist]
         return heldData
 
     def packHeld(self, nextHeader, data):
@@ -352,7 +352,7 @@ class SPI:
         #print 'testing', hexlify(testdata), hexlify(macdata)
         if testdata != macdata:
         #    print 'Authentification failed'
-            raise ESPUnpackError, ('Authentification Failed: %s != %s'
+            raise ESPUnpackError('Authentification Failed: %s != %s'
                                    % (testdata,
                                       macdata))
         #else:
@@ -365,14 +365,14 @@ class SPI:
         #print 'unpack: Plain was:', len(plaintext),  len(plaintext) % self.blocksize
         padlen, nexthead = ord(plaintext[-2]), ord(plaintext[-1])
         #print "unpack: padlength", padlen, len(pad), len(data), hexlify(data)
-        if padblock[:padlen] <> plaintext[(-2-padlen):(-2)]:
+        if padblock[:padlen] != plaintext[(-2-padlen):(-2)]:
             #print 'Apparently incorrect padding'
-            raise ESPUnpackError, ' '.join(['Padding Incorrect: ',
+            raise ESPUnpackError(' '.join(['Padding Incorrect: ',
                                             str(padlen),
                                             str(nexthead),
                                             hexlify(pad),
                                             hexlify(padblock[:padlen]),
-                                            hexlify(payload)])
+                                            hexlify(payload)]))
         self.unpackcount += 1
         return ((SPI, SN, plaintext[:(-2-padlen)], nexthead))
 

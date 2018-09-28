@@ -1,4 +1,4 @@
-from __future__ import generators
+
 
 from pprint import pprint
 import struct
@@ -6,7 +6,7 @@ import operator
 from binascii import hexlify
 import types
 import sha
-import Queue
+import queue
 from Crypto.Util import randpool
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 import IPAddress
@@ -22,7 +22,7 @@ class Memoize:
         self.fn = fn
         self.memo = {}
     def __call__(self, *args):
-        if not self.memo.has_key(args):
+        if args not in self.memo:
             self.memo[args] = self.fn(*args)
         return self.memo[args]
 
@@ -104,7 +104,7 @@ class IPhandler:
                 frlast = froff + frlen - 1
                 holes, frags, lens = self.holes, self.frags, self.lens
                 #print 'fragment', '%x %x' % (froff, frlen), frid, froff, frlast
-                if not frags.has_key(frid):
+                if frid not in frags:
                     holes[frid] = [(0,65536)]
                     frags[frid] = array('b',self._array_initialiser)
                     lens[frid] = frlast
@@ -153,7 +153,7 @@ class IPhandler:
             payload = pkt[IPAddress.IP6Header_len:]
         else:
             # not something we know what to do with
-            print "Wierd packet"
+            print("Wierd packet")
             #print hexlify(pkt)
             return (None, None, None, None)
         # at this point, we have a complete packet
@@ -189,7 +189,7 @@ class HIPError(Exception):
     def __init__(self, value=None):
         self.value = value
     def __str__(self):
-        return `self.value`
+        return repr(self.value)
 
 class HIPUnpackError(HIPError):
     pass
@@ -200,7 +200,7 @@ class HIPNewConnection(HIPError):
 #class HIPNoPacket(HIPError):
 #    pass
     
-HIPNoPacket = Queue.Empty
+HIPNoPacket = queue.Empty
 
 
 # just placeholders to carry attributes.
@@ -278,9 +278,9 @@ def unpackTLVC(payload):
 
 
 def hexorrep(x):
-    if type(x)==types.StringType:
+    if type(x)==bytes:
         return '%s (%d)' % (hexlify(x), len(x))
-    elif type(x)==types.ListType:
+    elif type(x)==list:
         return repr(x)
     else:
         return str(x)
@@ -294,18 +294,18 @@ def keymatgen(dhkey, hitlist):
         new = sha.new(''.join([dhkey]
                               +hitlist
                               +[chr(i)])).digest()
-        print 'Keymat:', hexlify(new)
+        print('Keymat:', hexlify(new))
         yield new
         while 1:
             i += 1
             new = sha.new(''.join([dhkey,
                                   new,
                                   chr(i)])).digest()
-            print 'Keymat:', hexlify(new)
+            print('Keymat:', hexlify(new))
             yield new
     g = keymatgen1(dhkey, hitlist)
     while 1:
-        for i in g.next():
+        for i in next(g):
             yield i
 
 
@@ -327,7 +327,7 @@ until the heap is rebuilt.'''
     def smallest(self):
         '''Find smallest item after removing deleted items from heap.'''
         if len(self) == 0:
-            raise IndexError, "smallest of empty priorityDictionary"
+            raise IndexError("smallest of empty priorityDictionary")
         heap = self.__heap
         while heap[0][1] not in self or self[heap[0][1]] != heap[0][0]:
             lastItem = heap.pop()
@@ -360,7 +360,7 @@ too large, to avoid memory leakage.'''
         dict.__setitem__(self,key,val)
         heap = self.__heap
         if len(heap) > 2 * len(self):
-            self.__heap = [(v,k) for k,v in self.iteritems()]
+            self.__heap = [(v,k) for k,v in self.items()]
             self.__heap.sort()  # builtin sort likely faster than O(n) heapify
         else:
             newPair = (val,key)
@@ -379,11 +379,11 @@ too large, to avoid memory leakage.'''
         return self[key]
 
     def update(self, other):
-        for key in other.keys():
+        for key in list(other.keys()):
             self[key] = other[key]
 
 try:
-    map(psyco.bind, [fixULPChecksum,
+    list(map(psyco.bind, [fixULPChecksum,
                      IPAddress.IPv6_ntoa,
                      keymatgen,
                      unpackLV,
@@ -391,6 +391,6 @@ try:
                      unpackTLVC,
                      packTLVC,
                      struct,
-                     IP])
+                     IP]))
 except NameError:
     pass

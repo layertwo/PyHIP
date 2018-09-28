@@ -1,5 +1,5 @@
 import unittest
-import Queue 
+import queue 
 from HIPState import *
 from HIPOptMessage import *
 import struct
@@ -34,45 +34,45 @@ class HIPTests(unittest.TestCase):
         for i in range(3,27):
             self.SM.Cookie.K = i
             r = self.SM.Cookie.new()
-            self.failUnless( (struct.unpack('!L',r[-4:])[0]) < ((2<<self.SM.Cookie.K+1)) )
+            self.assertTrue( (struct.unpack('!L',r[-4:])[0]) < ((2<<self.SM.Cookie.K+1)) )
         self.SM.Cookie.K = 28
-        self.failUnlessRaises( ValueError, self.SM.Cookie.new )
+        self.assertRaises( ValueError, self.SM.Cookie.new )
 
     def testCookiePuzzle(self):
             self.SM.Cookie.K = 9
             self.SM.Cookie.new()
             c = self.SM.Cookie.pack()
             r = self.SM.Cookie.puzzle(c)
-            self.failUnless( self.SM.Cookie.check(r) )
+            self.assertTrue( self.SM.Cookie.check(r) )
 
 
     def testExistsE0(self):
-        self.failUnless( E0 )
+        self.assertTrue( E0 )
 
     def testExistsE1(self):
-        self.failUnless( E1 )
+        self.assertTrue( E1 )
 
     def testExistsE2(self):
-        self.failUnless( E2 )
+        self.assertTrue( E2 )
 
     def testExistsE3(self):
-        self.failUnless( E3 )
+        self.assertTrue( E3 )
 
     def testExistsI1(self):
-        self.failUnless( I1 )
-        self.failUnless( I1.code == 1 )
+        self.assertTrue( I1 )
+        self.assertTrue( I1.code == 1 )
 
     def packetIntegTest(self, result):
         (h, rest) = unpackHeader(result, junk())
         #print len(result), hexlify(result)
-        print
-        print hexlify(result[:HIP_HEADER_LEN]), h.fqdn
+        print()
+        print(hexlify(result[:HIP_HEADER_LEN]), h.fqdn)
         for i in range(0, len(rest), 32):
-            print '%4d' % i, hexlify(rest[i:i+32])
+            print('%4d' % i, hexlify(rest[i:i+32]))
                        
-        print
-        print repr(h.__dict__)
-        print 'type is', HIP_Packets[h.type]
+        print()
+        print(repr(h.__dict__))
+        print('type is', HIP_Packets[h.type])
         n = 0
         b = 0
         l=[]
@@ -84,7 +84,7 @@ class HIPTests(unittest.TestCase):
                    ((HIP_RR_OPT, HIP_OPT_IDENT_ENCRYPTED), self.SM.unpackEncrypted),
                    ]
             try:
-                v2 = apply([x[1] for x in ops if x[0] == (t)][0], [v])
+                v2 = [x[1] for x in ops if x[0] == (t)][0](*[v])
             except IndexError:
                 v2 = hexlify(v)
             l.append((t, v2))
@@ -97,9 +97,9 @@ class HIPTests(unittest.TestCase):
                 v2 += ']'
             else:
                 v2=v
-            print HIP_RECs[t], repr(v2)
-        print h.length, h.rcount, b, n
-        if len(filter(lambda x: x[:2] == (HIP_RR_SIG, 0), l)):
+            print(HIP_RECs[t], repr(v2))
+        print(h.length, h.rcount, b, n)
+        if len([x for x in l if x[:2] == (HIP_RR_SIG, 0)]):
             ver = verifypacket(result, self.SM.HI)
             # excessive, I know, but hey, signature checks are cheap
             # have to miss the padding after the signature,
@@ -112,38 +112,38 @@ class HIPTests(unittest.TestCase):
                     break
                 ver = verifypacket(r2, self.SM.HI)
                 assert( ver == 0 )
-        print
+        print()
 
-        self.failUnless( b <= h.length<<3 )
-        self.failUnless( n == h.rcount )
+        self.assertTrue( b <= h.length<<3 )
+        self.assertTrue( n == h.rcount )
 
 
 
     def testSetState(self):
         self.SM.setstate(E1)
-        self.failUnless( self.SM.state == E1 )
+        self.assertTrue( self.SM.state == E1 )
 
     def testE0getsI1(self):
         result=self.SM.next(I1)
-        self.failUnless( self.SM.state == E0 )
-        self.failUnless( self.SM.emit()[0] == R1 )
+        self.assertTrue( self.SM.state == E0 )
+        self.assertTrue( self.SM.emit()[0] == R1 )
 
     def testE0getsI2(self):
         message=I2
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless( self.SM.emit()[0] == R2 )
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue( self.SM.emit()[0] == R2 )
         self.SM.setstate(E0)
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E0 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E0 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
     def testE0getsESP(self):
         result=self.SM.next(ESPM)
-        self.failUnless( self.SM.state == E0 )
-        self.failUnless( self.SM.emit()[0] == R1 )
+        self.assertTrue( self.SM.state == E0 )
+        self.assertTrue( self.SM.emit()[0] == R1 )
 
     def testE0getsOther(self):
         list = [
@@ -155,21 +155,21 @@ class HIPTests(unittest.TestCase):
             ]
         for i in list:
             result=self.SM.next(i)
-            self.failUnless( self.SM.state == E0 )
-            self.failUnless(self.SM.OutQueue.queue.empty()==1)
+            self.assertTrue( self.SM.state == E0 )
+            self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
     def testE1getsR1(self):
         self.SM.setstate(E1)
         message=R1
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E2 )
-        self.failUnless( self.SM.emit()[0] == I2 )
+        self.assertTrue( self.SM.state == E2 )
+        self.assertTrue( self.SM.emit()[0] == I2 )
         self.SM.setstate(E1)
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == EFail )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == EFail )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
 
     def testE1getsOther(self):
@@ -185,21 +185,21 @@ class HIPTests(unittest.TestCase):
             ]
         for i in list:
             result=self.SM.next(i)
-            self.failUnless( self.SM.state == E1 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+            self.assertTrue( self.SM.state == E1 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
     def testE2getsR2(self):
         self.SM.setstate(E2)
         message=R2
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
         self.SM.setstate(E2)
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == EFail )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == EFail )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
 
     def testE2getsOther(self):
@@ -215,8 +215,8 @@ class HIPTests(unittest.TestCase):
             ]
         for i in list:
             result=self.SM.next(i)
-            self.failUnless( self.SM.state == E2 )
-            self.failUnless(self.SM.OutQueue.queue.empty()==1)
+            self.assertTrue( self.SM.state == E2 )
+            self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
 ##    def testE3getsNES(self):
 ##        self.SM.setstate(E3)
@@ -235,14 +235,14 @@ class HIPTests(unittest.TestCase):
         message=I2
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless( self.SM.emit()[0] == R2 )
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue( self.SM.emit()[0] == R2 )
         # incomplete: drop SA
         self.SM.setstate(E3)
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
 
     def testE3getsR1(self):
@@ -250,15 +250,15 @@ class HIPTests(unittest.TestCase):
         message=R1
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E2 )
-        self.failUnless( self.SM.emit()[0] == I2 )
+        self.assertTrue( self.SM.state == E2 )
+        self.assertTrue( self.SM.emit()[0] == I2 )
         # incomplete: piggyback ESP
         # incomplete: drop SA
         self.SM.setstate(E3)
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
 
     def testE3getsREA(self):
@@ -266,13 +266,13 @@ class HIPTests(unittest.TestCase):
         message=REA
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
         # incomplete: REA worked (test here at all?)
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
 
     def testE3getsI1(self):
@@ -280,12 +280,12 @@ class HIPTests(unittest.TestCase):
         message=I1
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless( self.SM.emit()[0] == R1 )
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue( self.SM.emit()[0] == R1 )
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
 
     def testE3getsESP(self):
@@ -293,26 +293,26 @@ class HIPTests(unittest.TestCase):
         message=ESPM
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
     def testE3getsR2(self):
         self.SM.setstate(E3)
         message=R2
         message.valid=1
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
         # incomplete: drop
         self.SM.setstate(E3)
         message.valid=None
         result=self.SM.next(message)
-        self.failUnless( self.SM.state == E3 )
-        self.failUnless(self.SM.OutQueue.queue.empty()==1)
+        self.assertTrue( self.SM.state == E3 )
+        self.assertTrue(self.SM.OutQueue.queue.empty()==1)
 
 
         

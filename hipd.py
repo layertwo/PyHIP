@@ -1,4 +1,4 @@
-from __future__ import generators
+
 
 ##try:
 ##    from psyco.classes import *
@@ -25,7 +25,7 @@ from fcntl import ioctl
 from binascii import hexlify, unhexlify
 from array import array
 from pprint import pformat
-import Queue
+import queue
 
 import ESP
 import weakref
@@ -49,7 +49,7 @@ def convertIPlist(IPs):
     # list of getaddrinfo values
     remoteIPs=[]
     for i in IPs:
-        if type(i) == types.StringType:
+        if type(i) == bytes:
             if len(i) == 4:
                 i = socket.inet_ntoa(i)
             else:
@@ -106,7 +106,7 @@ class HostStateMachine(HIPState.StateMachine):
         # list of numeric IP addresses
         # list of getaddrinfo values
         remoteIPs=convertIPlist(IPs)
-        print 'setRemoteIPs to:', repr(remoteIPs)
+        print('setRemoteIPs to:', repr(remoteIPs))
         self.remoteIPs = remoteIPs
         self.remoteIPCurrent = (self.remoteIPs[0][4][0], HIP_PROTO_NO)
         self.remoteIPCurrent_n = IPAddress.IPv6_aton(self.remoteIPCurrent[0])
@@ -115,23 +115,23 @@ class HostStateMachine(HIPState.StateMachine):
         current = 0
         current6 = 0
         self.localIPs_n = []
-        print "setting local ips:"
-        for i in interfaces.keys():
+        print("setting local ips:")
+        for i in list(interfaces.keys()):
             for j in interfaces[i]:
-                print i, ':', j.af, j.String, j.isglobal, j.name
+                print(i, ':', j.af, j.String, j.isglobal, j.name)
                 if j.isglobal:
                     self.localIPs_n.append(j.Netstring)
                     if j.af == 'inet' and not current:
-                        print "bingo4"
+                        print("bingo4")
                         current = 1
                         self.localIPCurrent = j.String 
                         self.localIPCurrent_n = j.Netstring
                     if j.af == 'inet6' and not current6:
-                        print "bingo6"
+                        print("bingo6")
                         current6 = 1
                         self.localIPCurrent6 = j.String 
                         self.localIPCurrent6_n = j.Netstring
-        print "set", self.localIPCurrent, 'and', self.localIPCurrent6
+        print("set", self.localIPCurrent, 'and', self.localIPCurrent6)
     
     def send(self, message, piggy='', piggybackProtocol=NO_PROTO, obj=None):
         if obj is None:
@@ -141,13 +141,13 @@ class HostStateMachine(HIPState.StateMachine):
         pkt = ''.join([message.pack(obj), piggy])
         self.piggybackProtocol = NO_PROTO
         if self.trace:
-            print self.FQDN, 'Sending:', message, (
+            print(self.FQDN, 'Sending:', message, (
                 repr((HIPChecksum(pkt,
                                   self.remoteIPCurrent_n,
                                   self.localIPCurrent_n,
                                   HIP_PROTO_NO),
                       self.remoteIPCurrent,
-                      self.localIPCurrent)))
+                      self.localIPCurrent))))
             pass
         self.OutQueue.put((HIPChecksum(pkt,
                                        self.remoteIPCurrent_n,
@@ -163,9 +163,9 @@ class Host:
     LSItable={}
     IPtable={}
     HITtable=IOhandler.HIPSocketHandler.HITtable
-    HIP6OutQueue = Queue.Queue(2)
-    ESP6OutQueue = Queue.Queue(1)
-    CMDWorkQueue = Queue.Queue()
+    HIP6OutQueue = queue.Queue(2)
+    ESP6OutQueue = queue.Queue(1)
+    CMDWorkQueue = queue.Queue()
     FutureEvents = priorityDictionary()
 
     def __init__(self,
@@ -230,7 +230,7 @@ class Host:
         self.machines = []
         # self.IPs is in getaddrinfo format
         self.IPs = []
-        for i in interfaces.keys():
+        for i in list(interfaces.keys()):
             for j in interfaces[i]:
                 #print i+':', j.af, j.String, j.isglobal, j.name
                 if j.isglobal and j.af_n in self.IPProtocols:
@@ -238,7 +238,7 @@ class Host:
 ##        self.IPs = [x
 ##                    for x in socket.getaddrinfo(fqdn, None)
 ##                    if x[0] in self.IPProtocols]
-        print "Using local IP addresses", repr(self.IPs)
+        print("Using local IP addresses", repr(self.IPs))
         for i in self.IPs:
             Host.IPtable[i] = self
 
@@ -253,11 +253,11 @@ class Host:
 
         if not self.useIPv6:
             # IPv4
-            print "IPv4 output selected"
+            print("IPv4 output selected")
             q = self.hipHandler.OutQueue
         else:
             # IPv6
-            print "IPv6 output selected"
+            print("IPv6 output selected")
             q = self.hip6Handler.OutQueue
 
         
@@ -290,14 +290,14 @@ class Host:
             IP = [x
                   for x in socket.getaddrinfo(IP[0], None)
                   if x[0] in self.IPProtocols][0]
-        print "New Connection:", IP[4][0]
+        print("New Connection:", IP[4][0])
         if len(IP[4]) == 2:
             # IPv4
-            print "IPv4 output selected"
+            print("IPv4 output selected")
             q = self.hipHandler.OutQueue
         else:
             # IPv6
-            print "IPv6 output selected"
+            print("IPv6 output selected")
             q = self.hip6Handler.OutQueue
         m = HostStateMachine(self,
                              hit=hit,
@@ -311,7 +311,7 @@ class Host:
                                              m)
         Host.IPtable[IP] = m
         Host.HITtable[hit] = m
-        print "Installing new:", repr(m), hexlify(hit)
+        print("Installing new:", repr(m), hexlify(hit))
         self.machines.insert(0,m)
         t = time.time()
         #print 'Setting DelCOn at', t, 'to', t+900
@@ -336,7 +336,7 @@ class Host:
 
     def CMD_readdress(self, sk, args):
         IPs = args
-        for con in self.LSItable.values():
+        for con in list(self.LSItable.values()):
             con.send(HIPMessage.REA)
             con.setLocalIPs(IPs)
         return pformat(IPs)
@@ -360,13 +360,13 @@ class Host:
             if d in host.OutMap:
                 host.OutMap[d][0].put(resp)
             else:
-                host.OutMap[d] = (Queue.Queue(), host.handleCMDOut)
+                host.OutMap[d] = (queue.Queue(), host.handleCMDOut)
                 host.OutMap[d][0].put(resp)
             # remove ourself from the callbacks
             m.callbacks[HIPState.E3] = m.E3callback
-        print args
+        print(args)
         host = args[0]
-        if len(args)>1 and args[1] <> '.':
+        if len(args)>1 and args[1] != '.':
             hit = unhexlify(args[1])
             if len(args)>2:
                 RR = args[2]
@@ -385,7 +385,7 @@ class Host:
         ip = [x
               for x in socket.getaddrinfo(host, None)
               if x[0] in self.IPProtocols][0]
-        print 'Connecting to ip', ip
+        print('Connecting to ip', ip)
         if hit in HI.HI.HITable:
             try:
                 m = Host.IPtable[ip]
@@ -429,22 +429,22 @@ class Host:
         return
         
     def CMD_makeSPI(self, sk, args):
-        print 'MakeSPI:', args
+        print('MakeSPI:', args)
         try:
             host, ESPalg, SPI, remoteSPI, ESPkey, authkey = args[:6]
         except:
-            return ''.join(traceback.format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback) + ['Wrong number of arguments'])
+            return ''.join(traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]) + ['Wrong number of arguments'])
         try:
             ip = [x
                   for x in socket.getaddrinfo(host, None)
                   if x[0] in self.IPProtocols][0]
         except:
-            return ''.join(traceback.format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback) + ['IP address invalid'])
+            return ''.join(traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]) + ['IP address invalid'])
         try:
             self.makeLocalSPI(SPI, ESPalg, unhexlify(ESPkey), unhexlify(authkey), ip)
             self.makeRemoteSPI(remoteSPI, ESPalg, unhexlify(ESPkey), unhexlify(authkey), ip)
         except:
-            return ''.join(traceback.format_exception(sys.exc_type, sys.exc_value, sys.exc_traceback) + ['error making SPIs (wrong key length?)'])
+            return ''.join(traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]) + ['error making SPIs (wrong key length?)'])
         return ('Made SPI with '
                 + host + ' at '
                 + repr(ip) + ' key: '
@@ -465,7 +465,7 @@ class Host:
         return hexlify(self.hi.pack())
         
     def CMD_list_his(self, sk, args):
-        return pformat(map(hexlify, HI.HI.HITable.keys()))
+        return pformat(list(map(hexlify, list(HI.HI.HITable.keys()))))
         
     def CMD_list_connections(self, sk, args):
         return pformat([{'LSIlocal': socket.inet_ntoa(struct.pack('!L',
@@ -487,11 +487,11 @@ class Host:
                          'Algorithm': x.ESPalg,
                          'Rekey': x.rekey,
                          'state': str(x.state)}
-                        for x in self.LSItable.values()])
+                        for x in list(self.LSItable.values())])
 
     def CMD_list_allstate(self, sk, args):
         return pformat([x.__dict__
-                        for x in self.LSItable.values()])
+                        for x in list(self.LSItable.values())])
 
     def emit(self):
         'Send everything we have queued'
@@ -505,9 +505,9 @@ class Host:
 ##                             payload[HIPMessage.HIPHeader.size:])
             handler = Host.HITtable[h.sourceHIT]
         except KeyError:
-            print 'Using new handler (opportunistic)'
+            print('Using new handler (opportunistic)')
             handler = self.newConnection(saddr, h.sourceHIT)
-            print 'Handler:', hexlify(handler.localHIT), repr(handler)
+            print('Handler:', hexlify(handler.localHIT), repr(handler))
         endHIP = (h.len-4)<<3
         #
         rest, piggy = rest[:endHIP], copy.copy(rest[endHIP:])
@@ -515,13 +515,13 @@ class Host:
             handler.input(payload, h=h, rest=rest)
             if piggy and (h.nh == ESP_PROTO_NO):
                 self.deliverESP(piggy)
-        except HIPState.HIPNewConnection, x:
-            print 'New connection', x.value
+        except HIPState.HIPNewConnection as x:
+            print('New connection', x.value)
             handler = self.newConnection(saddr, x.value)
-            print 'Handler:', hexlify(handler.localHIT), repr(handler)
+            print('Handler:', hexlify(handler.localHIT), repr(handler))
             handler.input(payload, h=h, rest=rest)
-        except HIPState.HIPUnpackError, x:
-            print 'Unpack failed because', x.value                 
+        except HIPState.HIPUnpackError as x:
+            print('Unpack failed because', x.value)                 
         handler.lastused = time.time()
 
 
@@ -572,19 +572,19 @@ class Host:
     def handleCMDOut(self, d, q):
         try:
             dat = q.get()
-        except Queue.Empty:
+        except queue.Empty:
             del self.SocketMap[d]
             del self.OutMap[d]
             return
         try:
             d.send(dat)
         except:
-            print 'Command connection write error'
+            print('Command connection write error')
             del self.SocketMap[d]
             del self.OutMap[d]
             d.close()
         if dat and dat == 'done':
-            print 'Closing command connection'
+            print('Closing command connection')
             del self.SocketMap[d]
             del self.OutMap[d]
             d.close()
@@ -592,7 +592,7 @@ class Host:
     def handleCMD(self, d, q):
         dat = d.recv(2000)
         if not dat:
-            print 'Command connection closing due to error'
+            print('Command connection closing due to error')
             del self.SocketMap[d]
             d.close()
         commandline = string.split(dat)
@@ -608,7 +608,7 @@ class Host:
         if d in self.OutMap:
             self.OutMap[d][0].put(rESP)
         else:
-            self.OutMap[d] = (Queue.Queue(), self.handleCMDOut)                
+            self.OutMap[d] = (queue.Queue(), self.handleCMDOut)                
             self.OutMap[d][0].put(rESP)
 
     def handleCMDCon(self, d, q):
@@ -619,7 +619,7 @@ class Host:
             pass
             
     def mainLoop(self):
-        print 'MainLoop'
+        print('MainLoop')
 
 #        self.hipHandler.run()
         self.hip6Handler.run()
@@ -676,7 +676,7 @@ class Host:
         def outQueueDrainer(f, d, q):
             #print 'Started output worker', f.__name__
             while 1:
-                print 'Output worker', f.__name__, d, ':'
+                print('Output worker', f.__name__, d, ':')
                 f(d, q)
 
         for d, q, f in self.outThreadList:
@@ -688,7 +688,7 @@ class Host:
         def inQueueDrainer(f, d, q):
             #print 'Started input worker', f.__name__
             while 1:
-                print 'Input worker', f.__name__, d, ':'
+                print('Input worker', f.__name__, d, ':')
                 f(d, q)
 
         for d, q, f in self.inThreadList:
@@ -701,10 +701,10 @@ class Host:
         while run:
             try:
                 InList = [x
-                          for x in self.SocketMap.keys()
+                          for x in list(self.SocketMap.keys())
                           if (self.SocketMap[x][0].empty())]
                 OutList = [x[0]
-                           for x in self.OutMap.items()
+                           for x in list(self.OutMap.items())
                            if not x[1][0].empty()]
 
                 l, o, e = select(InList,
@@ -728,7 +728,7 @@ class Host:
                 while e:
                     d=e.pop()
                     if d.getsockname() == '/tmp/hipd':
-                        print 'Closing command connection', d.getsockname()
+                        print('Closing command connection', d.getsockname())
                         del self.SocketMap[d]
                         del self.OutMap[d]
                         d.close()
@@ -757,29 +757,29 @@ def main():
     for opt, val in opts:
         if opt in ('-h', '--hostname'):
             hostname = val
-            print 'Hostname:', hostname
+            print('Hostname:', hostname)
         if opt in ('-k', '--key'):
             keyname = val
-            print 'Keyname:', keyname
+            print('Keyname:', keyname)
         if opt in ('-6', '--ipv6'):
             useIPv6 = 1
-            print 'Using IPv6'
+            print('Using IPv6')
         if opt in ('-p', '--piggyback'):
             pig = 1
-            print 'Using Piggyback (if remote advertises)'
+            print('Using Piggyback (if remote advertises)')
 
     hi1=HI.HI(keyname)
     if connect:
         hi2=HI.HI(connect)
-        print 'Other hit is', hexlify(hi2.HIT127())
+        print('Other hit is', hexlify(hi2.HIT127()))
         HI.HI.HITable[hi2.HIT127()] = hi2
 
-    print hostname, 'hit127 is', hexlify(hi1.HIT127())
-    print hostname, 'hit64 is ', hexlify(hi1.HIT64(unhexlify('9e800000000000000000000000000000')))
+    print(hostname, 'hit127 is', hexlify(hi1.HIT127()))
+    print(hostname, 'hit64 is ', hexlify(hi1.HIT64(unhexlify('9e800000000000000000000000000000'))))
 
     def cb(machine):
-        print 'Remote host is %s' % socket.inet_ntoa(struct.pack('!L', machine.remoteLSI))
-        print 'Local host is %s' % socket.inet_ntoa(struct.pack('!L', machine.localLSI))
+        print('Remote host is %s' % socket.inet_ntoa(struct.pack('!L', machine.remoteLSI)))
+        print('Local host is %s' % socket.inet_ntoa(struct.pack('!L', machine.localLSI)))
         pass
 
     def bing():
@@ -798,7 +798,7 @@ def main():
 
     (ip_pipe_in, if_pipe_out, if_pipe_err) = os.popen3('/sbin/ip -o addr show')
 
-    for line in if_pipe_out.xreadlines():
+    for line in if_pipe_out:
         splitline = line.split()
         interface, name, af, addr = splitline[:4]
         interface = int(interface[:-1])
@@ -822,12 +822,12 @@ def main():
             ip.name = name
             try:
                 # anything going wrong here
-                ip.Lifetime = long(splitline[-1].split('sec')[0])
+                ip.Lifetime = int(splitline[-1].split('sec')[0])
             except:
                 # means we don't know, so default.
-                ip.Lifetime = 0L
-            print str(interface)+':', ip.af, ip.String, ip.isglobal, ip.name, ip.Lifetime
-            if interfaces.has_key(interface):
+                ip.Lifetime = 0
+            print(str(interface)+':', ip.af, ip.String, ip.isglobal, ip.name, ip.Lifetime)
+            if interface in interfaces:
                 interfaces[interface].append(ip)
             else:
                 interfaces[interface] = [ip]

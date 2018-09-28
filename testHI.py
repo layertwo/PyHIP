@@ -90,7 +90,7 @@ class HITests(unittest.TestCase):
         self.hi=HI()
         #self.failUnlessRaises( DSA.DSAError, self.hi.pack )
         #self.hi.genKey()
-        self.failUnless( self.hi.pack() )
+        self.assertTrue( self.hi.pack() )
 
     def testSignVerify(self):
         self.hi=HI()
@@ -99,9 +99,9 @@ class HITests(unittest.TestCase):
         str = self.hi.pack()
         sig = self.hi.sign(str)
         v = self.hi.verify(str, sig)
-        self.failUnless( v )
+        self.assertTrue( v )
         str += 'gibberish'
-        self.failUnless( not self.hi.verify(str, sig) )
+        self.assertTrue( not self.hi.verify(str, sig) )
 
 
         

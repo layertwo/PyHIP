@@ -2,6 +2,7 @@ import struct
 import operator
 
 from binascii import hexlify, unhexlify
+from functools import reduce
 
 IPheader      = '!BBHHHBBH4s4s'
 IPheader_len  = struct.calcsize(IPheader)
@@ -76,7 +77,7 @@ def HIPChecksum(packet, Saddr, Daddr, nh):
                          '\x00\x00',
                          packet[8:],
                          '\x00'[0:(len(packet) & 1)]])
-    print "HIPChecksum:", hexlify(pseudopkt), len(pseudopkt), len(packet)
+    print("HIPChecksum:", hexlify(pseudopkt), len(pseudopkt), len(packet))
     l = struct.unpack('!%dH' % (len(pseudopkt)>>1),
                       pseudopkt)
     csum = reduce(operator.add,

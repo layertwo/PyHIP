@@ -1,11 +1,11 @@
-from __future__ import generators
+
 
 ##try:
 ##    from psyco.classes import *
 ##except ImportError:
 ##    pass
 
-import Queue
+import queue
 import traceback
 import weakref
 from types import *
@@ -26,7 +26,7 @@ import ESP
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 class Output:
-    queue=Queue.Queue()
+    queue=queue.Queue()
     #def __init__(self):
     #    self.queue=[]
     def send(self, message, machine):
@@ -91,7 +91,7 @@ class _StateMachine:
         if h.type == HIP_PAYLOAD:
             return
         if hasattr(self, 'trace'):
-            print self.FQDN, 'Received:', HIP_Packets[h.type]
+            print(self.FQDN, 'Received:', HIP_Packets[h.type])
         n = 0
         b = 0
         l=[]
@@ -100,7 +100,7 @@ class _StateMachine:
             (t, v, rest) = HIPOptMessage.HIPRec().unpack(rest)
             l.append(v)
         if hasattr(self, 'trace'):
-            print self.FQDN, 'Parsed:', HIP_Packets[h.type]
+            print(self.FQDN, 'Parsed:', HIP_Packets[h.type])
         ver = 1
         if (not h.type in [HIP_BOS, HIP_I1, HIP_PAYLOAD, HIP_I2]):
             sigrec = [x for x in l if x.name[:3] == 'SIG'][0]
@@ -113,10 +113,10 @@ class _StateMachine:
             except KeyError:
                 ver = 1
             if not ver:
-                print 'Verify Failed', ver, hexlify(packet) #, repr(HI.HI.HITable[h.sourceHIT])
+                print('Verify Failed', ver, hexlify(packet)) #, repr(HI.HI.HITable[h.sourceHIT])
             else:
                 if hasattr(self, 'trace'):
-                    print self.FQDN, 'Verified:', HIP_Packets[h.type]
+                    print(self.FQDN, 'Verified:', HIP_Packets[h.type])
         m = HIPOptMessage.Message.dispatchlist[h.type]
         m.input(self, h, l)
         m.valid = ver
@@ -131,13 +131,13 @@ class _StateMachine:
             except KeyError:
                 ver = 1
             if not ver:
-                print 'BOS Verify Failed', ver, hexlify(packet) #, repr(HI.HITable[h.sourceHIT])
+                print('BOS Verify Failed', ver, hexlify(packet)) #, repr(HI.HITable[h.sourceHIT])
             else:
                 if hasattr(self, 'trace'):
-                    print self.FQDN, 'Verified:', HIP_Packets[h.type]
-        print 'Valid?', m.valid
+                    print(self.FQDN, 'Verified:', HIP_Packets[h.type])
+        print('Valid?', m.valid)
         if not m.valid:
-            print "assuming valid anyway!!!"
+            print("assuming valid anyway!!!")
             m.valid = 1
         next = self.next(m)
         try:
@@ -146,7 +146,7 @@ class _StateMachine:
             pass
         except:
             traceback.print_exc()
-        if hasattr(self, 'trace'): print self.FQDN, 'Transition:', next
+        if hasattr(self, 'trace'): print(self.FQDN, 'Transition:', next)
         self.setstate(next)
         try:
             self.callbacks[self.state](self)
@@ -163,7 +163,7 @@ class _StateMachine:
         self.state = state
         
     def send(self, message):
-        if hasattr(self, 'trace'): print self.FQDN, repr(self.state), 'Sending:', message
+        if hasattr(self, 'trace'): print(self.FQDN, repr(self.state), 'Sending:', message)
         message.valid=1
         self.OutQueue.send(message, self)
 
@@ -179,13 +179,13 @@ class _StateMachine:
 
     def drawkey(self, keylen):
         return ''.join(map(apply,
-                           [self.keygenerator.next]
+                           [self.keygenerator.__next__]
                            *keylen))
 
     def drawHIPkeys(self, keylen, initiator):
         self.remotehipkey = self.drawkey(keylen)
         self.hipkey = self.drawkey(keylen)
-        print "drawHIPkeys:", hexlify(self.remotehipkey), hexlify(self.hipkey)
+        print("drawHIPkeys:", hexlify(self.remotehipkey), hexlify(self.hipkey))
         if initiator:
             # swap the keys
             (self.hipkey,
@@ -429,7 +429,7 @@ EFail=EFailState()
 
 
 class StateMachine(_StateMachine):
-    birthday = long(time())
+    birthday = int(time())
     def LSIgen(b):
         i = b
         while 1:

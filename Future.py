@@ -36,6 +36,6 @@ class Future:
         except:
             self.__result="Exception raised within Future"
         self.__done=1
-        self.__status=`self.__result`
+        self.__status=repr(self.__result)
         self.__C.notify()
         self.__C.release()

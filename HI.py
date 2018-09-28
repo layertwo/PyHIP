@@ -6,7 +6,7 @@ import sha
 import struct
 import binascii
 #import pickle
-import cPickle
+import pickle
 import HIPutils
 #from pysnmp import asn1
 import asn1
@@ -34,7 +34,7 @@ class HI:
 
     def __init__(self,file=None,Rec=None,List=None,Size=512):
         if file:
-            self.dsa = DSA.construct(cPickle.load(open(file, 'rb')))
+            self.dsa = DSA.construct(pickle.load(open(file, 'rb')))
         elif Rec:
             self.unpack(Rec)
         elif List:
@@ -86,7 +86,7 @@ class HI:
         #t = 64 * (ord(string[0])+1)
         t = (ord(string[0])*8+64)
         if (len(string) != (1 + 20 + (3 * t))):
-            raise ValueError, 'HI: got RR length %d expecting %d' % (len(string), (1 + 20 + (3 * t)))
+            raise ValueError('HI: got RR length %d expecting %d' % (len(string), (1 + 20 + (3 * t))))
         (t, q, p, g, y) = struct.unpack('!B20s%ds%ds%ds'%(t,t,t), string)
         self.dsa = DSA.construct([bytes_to_long(y),
                                   bytes_to_long(g),
@@ -110,7 +110,7 @@ class HI:
     def unpackASN1(self, string):
         # yuck what a horrid library!
         seq, rest = asn1.decode(string)
-        if rest: raise ValueError, 'HI: unpack failed'
+        if rest: raise ValueError('HI: unpack failed')
         algseq, pubkey = asn1.decode(seq.value)
         oid, rest = asn1.decode(algseq.value)
         dssParmseq, junk = asn1.decode(rest)
@@ -178,7 +178,7 @@ class HI:
 ##        print repr(self.dsa.__dict__)
 ##        print self.dsa.size()
         seq, rest = asn1.decode(sig)
-        if rest: raise ValueError, 'HI: unpack failed'
+        if rest: raise ValueError('HI: unpack failed')
         r, rest = asn1.decode(seq.value)
         s, rest = asn1.decode(rest)
         return self.dsa.verify(bytes_to_long(sha.new(str).digest()),
@@ -192,12 +192,11 @@ class HI:
 
     def HIT(self, template, mask):
         hash=self.__rawhash__()
-        self.hit = apply( struct.pack,
-                          ['16B'] + map(lambda h, t, m: t | (h & m),
+        self.hit = struct.pack(*['16B'] + list(map(lambda h, t, m: t | (h & m),
                                        struct.unpack('16B', hash),
                                        struct.unpack('16B', template),
                                        struct.unpack('16B', mask)
-                                       ))
+                                       )))
         return self.hit
 
         
@@ -243,40 +242,40 @@ if __name__ == "__main__":
         for opt, val in opts:
             if opt in ('-w', '--write'):
                 filename = val
-                print 'Writing new HI to:', filename
+                print('Writing new HI to:', filename)
                 hi = HI()
-                print repr(hi)
-                cPickle.dump([hi.dsa.y,
+                print(repr(hi))
+                pickle.dump([hi.dsa.y,
                               hi.dsa.g,
                               hi.dsa.p,
                               hi.dsa.q,
                               hi.dsa.x], file(filename, 'wb'))
-                print 'HIT is', binascii.hexlify(hi.HIT127())
-                print 'RR is', binascii.hexlify(hi.pack())
-                print 'y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y))
-                print 'p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p))
-                print 'g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g))
-                print 'q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q))
+                print('HIT is', binascii.hexlify(hi.HIT127()))
+                print('RR is', binascii.hexlify(hi.pack()))
+                print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
+                print('p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p)))
+                print('g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g)))
+                print('q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q)))
             if opt in ('-r', '--read'):
                 filename = val
-                print 'Reading HI from', filename
+                print('Reading HI from', filename)
                 rec = file(filename,'r').read().strip()
                 hi = HI(Rec=binascii.unhexlify(rec))
-                print 'HIT is', binascii.hexlify(hi.HIT127())
-                print 'RR is', binascii.hexlify(hi.pack())
-                print 'y = ', hi.dsa.y
-                print 'p = ', hi.dsa.p
-                print 'g = ', hi.dsa.g
-                print 'q = ', hi.dsa.q
+                print('HIT is', binascii.hexlify(hi.HIT127()))
+                print('RR is', binascii.hexlify(hi.pack()))
+                print('y = ', hi.dsa.y)
+                print('p = ', hi.dsa.p)
+                print('g = ', hi.dsa.g)
+                print('q = ', hi.dsa.q)
             if opt in ('-h', '--hostkey'):
-                print 'Reading HI from', val
+                print('Reading HI from', val)
                 hi = HI(val)
-                print 'HIT is', binascii.hexlify(hi.HIT127())
-                print 'RR is', binascii.hexlify(hi.pack())
-                print 'y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y))
-                print 'p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p))
-                print 'g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g))
-                print 'q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q))
+                print('HIT is', binascii.hexlify(hi.HIT127()))
+                print('RR is', binascii.hexlify(hi.pack()))
+                print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
+                print('p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p)))
+                print('g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g)))
+                print('q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q)))
         pass
 
     main()

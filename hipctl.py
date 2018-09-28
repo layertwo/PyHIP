@@ -19,7 +19,7 @@ class hipctl(Cmd):
     
     def default(self, line):
         self.sk.send(line)
-        print self.sk.recv(2000)
+        print(self.sk.recv(2000))
 
     def do_done(self, line):
         self.sk.send('done')
@@ -34,20 +34,20 @@ class hipctl(Cmd):
         ret = self.sk.recv(2000)
         filename = string.split(line)[0]
         if os.access(filename, os.F_OK):
-            print 'File %s exists' % filename
+            print('File %s exists' % filename)
             return
         try:
             f = file(filename, 'w+')
             f.write(ret)
             f.close()
         except IOError:
-            print 'Could not write file %s' % filename
+            print('Could not write file %s' % filename)
             return
-        print 'Wrote HI to file %s' % filename
+        print('Wrote HI to file %s' % filename)
 
     def do_connect(self, line):
         l = string.split(line)
-        print repr(l)
+        print(repr(l))
         host = l[0]
         if len(l) > 2:
             hit = l[2]
@@ -62,11 +62,11 @@ class hipctl(Cmd):
                 rr = ''
         else:
             rr = ''
-        print rr
+        print(rr)
         self.sk.send('connect %s %s %s' % (host, hit, rr))
-        print self.sk.recv(2000)
+        print(self.sk.recv(2000))
         if len(l) > 1:
-            print self.sk.recv(2000)
+            print(self.sk.recv(2000))
         
     def do_loadhi(self, line):
         try:
@@ -77,13 +77,13 @@ class hipctl(Cmd):
             else:
                 hi = ''
         except IndexError:
-            print 'Specify a filename'
+            print('Specify a filename')
             return
         f = file(filename, 'r')
         rr = f.read()
-        print rr
+        print(rr)
         self.sk.send('loadhi %s %s' % (rr, hi))
-        print self.sk.recv(2000)
+        print(self.sk.recv(2000))
 
 
 
@@ -108,7 +108,7 @@ def main():
             list = 1
         if opt in ('-t', '--hit'):
             hit = val
-    print 'hit is', hit
+    print('hit is', hit)
 
     if connect:
         h.do_connect('%s %s %s' % (connect, file, hit))

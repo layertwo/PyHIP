@@ -101,11 +101,11 @@ class ConversationTests(unittest.TestCase):
 
         while p1 or p2:
             while p2:
-                print p2
+                print(p2)
                 p=p2.pop(0)[0]
                 pkt2=p.pack(sm2)
-                print "sm2", sm2.FQDN, 'sent', str(p), "state", str(sm2.state)
-                print hexlify(pkt2)
+                print("sm2", sm2.FQDN, 'sent', str(p), "state", str(sm2.state))
+                print(hexlify(pkt2))
                 packetDump(pkt2)
                 sm1.input(pkt2)
             try:
@@ -120,8 +120,8 @@ class ConversationTests(unittest.TestCase):
             while p1:
                 p=p1.pop(0)[0]
                 pkt1=p.pack(sm1)
-                print "sm1", sm1.FQDN, 'sent', str(p), "state", str(sm1.state)
-                print hexlify(pkt1)
+                print("sm1", sm1.FQDN, 'sent', str(p), "state", str(sm1.state))
+                print(hexlify(pkt1))
                 packetDump(pkt1)
                 sm2.input(pkt1)
             try:
@@ -133,11 +133,11 @@ class ConversationTests(unittest.TestCase):
                     p2.append(sm2.emit())
             except:
                 pass
-        print "sm2", sm2.FQDN, "state", str(sm2.state)
-        print "sm1:", pformat(sm1.__dict__)
-        print "sm2:", pformat(sm2.__dict__)
+        print("sm2", sm2.FQDN, "state", str(sm2.state))
+        print("sm1:", pformat(sm1.__dict__))
+        print("sm2:", pformat(sm2.__dict__))
 
-        self.failUnless( sm2.state == E3 )
+        self.assertTrue( sm2.state == E3 )
 
 ##        # test REA
 
@@ -198,11 +198,11 @@ class ConversationTests(unittest.TestCase):
 
         while p1 or p2:
             while p2:
-                print p2
+                print(p2)
                 p=p2.pop(0)[0]
                 pkt2=p.pack(sm2)
-                print "sm2", sm2.FQDN, 'sent', str(p), "state", str(sm2.state)
-                print hexlify(pkt2)
+                print("sm2", sm2.FQDN, 'sent', str(p), "state", str(sm2.state))
+                print(hexlify(pkt2))
                 packetDump(pkt2)
                 sm1.input(pkt2)
             try:
@@ -217,8 +217,8 @@ class ConversationTests(unittest.TestCase):
             while p1:
                 p=p1.pop(0)[0]
                 pkt1=p.pack(sm1)
-                print "sm1", sm1.FQDN, 'sent', str(p), "state", str(sm1.state)
-                print hexlify(pkt1)
+                print("sm1", sm1.FQDN, 'sent', str(p), "state", str(sm1.state))
+                print(hexlify(pkt1))
                 packetDump(pkt1)
                 sm2.input(pkt1)
             try:
@@ -230,10 +230,10 @@ class ConversationTests(unittest.TestCase):
                     p2.append(sm2.emit())
             except:
                 pass
-        print "sm2", sm2.FQDN, "state", str(sm2.state)
+        print("sm2", sm2.FQDN, "state", str(sm2.state))
         
-        self.failUnless( sm2.rekeying == 0 )
-        self.failUnless( sm2.ESPkey <> savedkey )
+        self.assertTrue( sm2.rekeying == 0 )
+        self.assertTrue( sm2.ESPkey != savedkey )
 
 suite = unittest.makeSuite(ConversationTests,'test')
 

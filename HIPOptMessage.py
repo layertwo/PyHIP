@@ -251,7 +251,7 @@ class HIPRec:
         try:
             Body = HIP_RECs[Tag](Body)
         except KeyError:
-            print KeyError, 'Odd record of type ' + str(Tag) + ' ' + repr(self.__dict__) + ' ' + repr(string)
+            print(KeyError, 'Odd record of type ' + str(Tag) + ' ' + repr(self.__dict__) + ' ' + repr(string))
         return (Tag, Body, Rest)
 
 class HIP_REC_PAD(HIPRec):
@@ -1120,8 +1120,8 @@ def signpacket2(head, tail, hi):
     return ''.join([head.pack(), tail, sig])
 
 def verifypacket(packet, hi, sigrec, head):
-    print 'verifypacket'
-    print hexlify(sigrec.pack()), sigrec.__dict__, repr(hi)
+    print('verifypacket')
+    print(hexlify(sigrec.pack()), sigrec.__dict__, repr(hi))
     h2 = head
     siglen = len(sigrec.pack())
     h2.len -= ((siglen+7)/8)
@@ -1130,29 +1130,29 @@ def verifypacket(packet, hi, sigrec, head):
     head = h2.pack()
     sdata = ''.join([head,
                      packet[len(head):-siglen]])
-    print hexlify(sdata)
+    print(hexlify(sdata))
     v = hi.verify(sdata,sigrec.Sig)
-    print "verifypacket:", v
+    print("verifypacket:", v)
     
     return v
 
 def packetDump(result):
         (h, rest) = (HIPHeader(string=result), result[HIPHeader.size:])
         #print len(result), hexlify(result)
-        print
+        print()
 ##        print hexlify(result[:HIP_HEADER_LEN])
 ##        for i in range(0, len(rest), 32):
 ##            print '%4d' % i, hexlify(rest[i:i+32])
                        
 ##        print
-        print 'nh:', h.nh
-        print 'length:', h.len
-        print 'type:', HIP_Packets[h.type]
-        print 'magic:', h.magic
-        print 'control:', h.control
-        print 'csum:', h.csum
-        print 'srcHIT:', hexlify(h.sourceHIT)
-        print 'dstHIT:', hexlify(h.remoteHIT)
+        print('nh:', h.nh)
+        print('length:', h.len)
+        print('type:', HIP_Packets[h.type])
+        print('magic:', h.magic)
+        print('control:', h.control)
+        print('csum:', h.csum)
+        print('srcHIT:', hexlify(h.sourceHIT))
+        print('dstHIT:', hexlify(h.remoteHIT))
         if h.type in [1, 64]: return
         n = 0
         b = 0
@@ -1161,12 +1161,12 @@ def packetDump(result):
             n += 1
             (t, v, rest) = HIPRec().unpack(rest)
             l.append(v)
-            print str(v), '\n ', '\n  '.join(map(lambda x,y: ' = '.join([x,y]),
-                                       v.__dict__.keys(),
-                                       map(hexorrep, v.__dict__.values())))
+            print(str(v), '\n ', '\n  '.join(map(lambda x,y: ' = '.join([x,y]),
+                                       list(v.__dict__.keys()),
+                                       list(map(hexorrep, list(v.__dict__.values()))))))
 
 def packXfrm(xfrms):
-    return ''.join(map(lambda x: struct.pack('!H', x), xfrms))
+    return ''.join([struct.pack('!H', x) for x in xfrms])
 
 def unpackXfrm(payload):
     return list(struct.unpack('!%dH' % (len(payload)>>1), payload))
@@ -1212,7 +1212,7 @@ class Message:
 
   def DHdict(self, machine):
       if not(hasattr(machine.DH,'groupid')):
-          machine.DH.groupid = machine.GroupIDgen.next()
+          machine.DH.groupid = next(machine.GroupIDgen)
 ##      print repr({'GroupID': machine.DH.groupid,
 ##                  'Prime': long_to_bytes(machine.DH.p),
 ##                  'Generator': long_to_bytes(machine.DH.g),
@@ -1230,7 +1230,7 @@ class Message:
           machine.DH.groupid = dict['GroupID']
       machine.dhkey = long_to_bytes(
           machine.DH.decrypt((bytes_to_long(dict['Public']))))
-      print 'unDHdict', mode, hexlify(machine.dhkey), hexlify(hit1), hexlify(hit2)
+      print('unDHdict', mode, hexlify(machine.dhkey), hexlify(hit1), hexlify(hit2))
       return keymatgen(machine.dhkey, [hit1, hit2])
 
   def packDH(self, machine):
@@ -1246,7 +1246,7 @@ class Message:
       return RR
 
   def unpackDH(self, machine, RR, hit1, hit2, mode):
-      if RR[:5] <> '\x02\x00\xff\x02\x00':
+      if RR[:5] != '\x02\x00\xff\x02\x00':
           raise ValueError
       (p, rest) = unpackLV(RR[5:])
       (g, rest) = unpackLV(rest)
@@ -1263,29 +1263,29 @@ class Message:
       if machine.HIPXfrm == ENCR_NULL:
           return payload
       (name, cipher, keylen, blocksize) = HIPXfrmTable[machine.HIPXfrm]
-      print "HIP encrypt:", repr(cipher)
-      print hexlify(payload)
+      print("HIP encrypt:", repr(cipher))
+      print(hexlify(payload))
       iv = RandomPool.get_bytes(blocksize)
-      print "HIP encrypt:", hexlify(iv), hexlify(machine.hipkey)
-      print "HIP encrypt:", hexlify(machine.remotehipkey)
+      print("HIP encrypt:", hexlify(iv), hexlify(machine.hipkey))
+      print("HIP encrypt:", hexlify(machine.remotehipkey))
       pad = '\00' * (blocksize - (len(payload)%blocksize))
       C=cipher.new(machine.hipkey, cipher.MODE_CBC, iv)
       r = ''.join([iv, C.encrypt(''.join((payload,pad)))])
-      print hexlify(r)
+      print(hexlify(r))
       return r
 
   def unpackEncryptedPl(self, machine, payload):
       if machine.HIPXfrm == ENCR_NULL:
           return payload
       (name, cipher, keylen, blocksize) = HIPXfrmTable[machine.HIPXfrm]
-      print "HIP decrypt:", repr(cipher)
-      print hexlify(payload)
+      print("HIP decrypt:", repr(cipher))
+      print(hexlify(payload))
       iv = payload[:blocksize]
-      print "HIP decrypt:", hexlify(iv), hexlify(machine.remotehipkey)
-      print "HIP decrypt:", hexlify(machine.hipkey)
+      print("HIP decrypt:", hexlify(iv), hexlify(machine.remotehipkey))
+      print("HIP decrypt:", hexlify(machine.hipkey))
       C=cipher.new(machine.remotehipkey, cipher.MODE_CBC, iv)
       r = C.decrypt(payload[blocksize:])
-      print hexlify(r)
+      print(hexlify(r))
       return r
 
   def unpackEncrypted(self, machine, payload):
@@ -1298,7 +1298,7 @@ class Message:
                  #(HIP_REC_ESP_AUTH_TRANSFORM, unpackXfrm)
                  ]
           try:
-              v = apply([x[1] for x in ops if x[0] == t][0], [v])
+              v = [x[1] for x in ops if x[0] == t][0](*[v])
           except IndexError:
               pass
           l.append((t, v))
@@ -1332,7 +1332,7 @@ class I1Message(Message):
     def input(self, machine, header, RRset):
         #machine.remoteHIT = header.sourceHIT
         if header.remoteHIT == HI.zeroHIT:
-            print 'Detected opportunistic connection'
+            print('Detected opportunistic connection')
 ##            raise HIPNewConnection, header.sourceHIT
 ##        if header.remoteHIT <> machine.localHIT:
 ##            raise HIPUnpackError, ('Not local HIT '
@@ -1345,7 +1345,7 @@ class I1Message(Message):
         try:
             machine.remoteHI=HI.HI.HITable[header.sourceHIT]
         except:
-            print 'Detected new connection'
+            print('Detected new connection')
             #raise HIPNewConnection, header.sourceHIT
         return 1
         
@@ -1386,7 +1386,7 @@ class R1Message(Message):
         Message.__init__(self, 'R1', 2)
     def pack(self, machine):
         dhdict = self.DHdict(machine)
-        if DHGroups.has_key(dhdict['GroupID']):
+        if dhdict['GroupID'] in DHGroups:
             dhrec = HIP_REC_DH(**dhdict)
         else:
             dhrec = HIP_REC_DH_FULL(**dhdict)
@@ -1421,7 +1421,7 @@ class R1Message(Message):
                           machine.remoteHIT]))
         remoteBirthday = body.BIRTHDAY_COOKIE.Birthday
         if hasattr(machine,'remoteBirthday'):
-            if machine.remoteBirthday <> remoteBirthday:
+            if machine.remoteBirthday != remoteBirthday:
                 # it rebooted, bang it on the head
                 # not right.
                 #machine.send(I2)
@@ -1435,9 +1435,9 @@ class R1Message(Message):
                            for x in body.ESP_TRANSFORM.ESPXfrm + [ESP_3DES_CBC_HMAC_SHA1]
                            if x in machine.ESPXfrmList][0]
         # allocate LSI
-        machine.remoteLSI = machine.LSIgen.next()
+        machine.remoteLSI = next(machine.LSIgen)
         # allocate SPI
-        machine.remoteSPI = machine.SPIgen.next()
+        machine.remoteSPI = next(machine.SPIgen)
         # Extract HIP keymat.  We're initiator.
         try:
             dhdict = body.DH_FULL.__dict__
@@ -1505,7 +1505,7 @@ class I2Message(Message):
                                machine.Cookie.stored.K,
                                machine.Cookie.stored.cookie)
         dhdict = self.DHdict(machine)
-        if DHGroups.has_key(dhdict['GroupID']):
+        if dhdict['GroupID'] in DHGroups:
             dhrec = HIP_REC_DH(**dhdict)
         else:
             dhrec = HIP_REC_DH_FULL(**dhdict)
@@ -1537,7 +1537,7 @@ class I2Message(Message):
         # todo: handle controls
         remoteBirthday = body.BIRTHDAY_COOKIE.Birthday
         if hasattr(machine,'remoteBirthday'):
-            if machine.remoteBirthday <> remoteBirthday:
+            if machine.remoteBirthday != remoteBirthday:
                 # it rebooted, bang it on the head
                 # todo
                 pass
@@ -1547,9 +1547,9 @@ class I2Message(Message):
         if not machine.Cookie.cookieOp(machine.Cookie.I,
                                        body.BIRTHDAY_COOKIE.JK,
                                        machine.Cookie.K):
-            print "Cookie puzzle failure"
+            print("Cookie puzzle failure")
         else:
-            print "Cookie puzzle pass"
+            print("Cookie puzzle pass")
             #raise HIPUnpackError, 'Bad Cookie'
         # in both cases, take the first we're configured to support
         machine.HIPXfrm = [x
@@ -1558,11 +1558,11 @@ class I2Message(Message):
         machine.localLSI = body.SPI_LSI.LSI
         machine.localSPI = body.SPI_LSI.SPI
         # allocate LSI
-        machine.remoteLSI = machine.LSIgen.next()
+        machine.remoteLSI = next(machine.LSIgen)
         if hasattr(machine, 'LSIcallback') and callable(machine.LSIcallback):
             machine.LSIcallback(machine)
         # allocate SPI
-        machine.remoteSPI = machine.SPIgen.next()
+        machine.remoteSPI = next(machine.SPIgen)
         # extract HIP keymat.  We're rESPonder.
         try:
             dhdict = body.DH_FULL.__dict__
@@ -1572,9 +1572,9 @@ class I2Message(Message):
             try:
                 dhdict.update(DHGroups[body.DIFFIE_HELLMAN.GroupID])
             except:
-                print "Invalid GroupID received"
+                print("Invalid GroupID received")
                 raise
-        print 'Got DH', dhdict
+        print('Got DH', dhdict)
         machine.keygenerator=self.unDHdict(machine,
                                            dhdict,
                                            machine.localHIT,
@@ -1773,9 +1773,9 @@ class NESMessage(Message):
         # also assume DH key was regenerated elsewhere
         # SN is preincrement
         SN = machine.remoteESP.SN + 1
-        machine.localSPI =  StateMachine.SPIgen.next()
+        machine.localSPI =  next(StateMachine.SPIgen)
         dhdict = self.DHdict(machine)
-        if DHGroups.has_key(dhdict['GroupID']):
+        if dhdict['GroupID'] in DHGroups:
             dhrec = HIP_REC_DH(**dhdict)
         else:
             dhrec = HIP_REC_DH_FULL(**dhdict)
@@ -1813,7 +1813,7 @@ class NESMessage(Message):
             # Ok, we were not passed a DH, therefore we already have
             # the keymat. note that I think we have a bug here; is this
             # correct when we generated a new DH key when sending?
-            print "NES: This shouldn't happen!"
+            print("NES: This shouldn't happen!")
             machine.dhkey = long_to_bytes(
                 machine.DH.decrypt((bytes_to_long(dict['Public']))))
             machine.keygenerator = keymatgen(machine.dhkey,

@@ -27,7 +27,7 @@ class HIPCookie:
         # local symbol lookup is MUCH faster
         rb=RandomPool.get_bytes
         j = rb(8)
-        while (bytes_to_long(sha.new(''.join([i, self.hits, j])).digest())&m) <> target:
+        while (bytes_to_long(sha.new(''.join([i, self.hits, j])).digest())&m) != target:
             j = rb(8)
         return ''.join([self.I, j, c])
 
@@ -42,11 +42,11 @@ class HIPCookie:
         sh = sha.new
         h = self.hits
         j = rb(8)
-        while (b2l(sh(''.join([i, h, j])).digest())&m) <> target:
+        while (b2l(sh(''.join([i, h, j])).digest())&m) != target:
             j = rb(8)
         self.J = j
         self.cookie = c
-        print "Cookie Puzzle:", hexlify(sh(''.join([i, h, j])).digest()), hex((b2l(sh(''.join([i, h, j])).digest())&m)), hexlify(i+j)
+        print("Cookie Puzzle:", hexlify(sh(''.join([i, h, j])).digest()), hex((b2l(sh(''.join([i, h, j])).digest())&m)), hexlify(i+j))
         return ''.join([self.I, j, c])
 
     def new(self):

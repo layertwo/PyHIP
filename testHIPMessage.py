@@ -1,5 +1,5 @@
 import unittest
-import Queue 
+import queue 
 from HIPState import *
 from HIPMessage import *
 import struct
@@ -38,58 +38,58 @@ class HIPTests(unittest.TestCase):
 
     def testFQDN(self):
         self.SM.setFQDN('1234')
-        self.failUnless( self.SM.packFQDN() == '\x00\x041234')
+        self.assertTrue( self.SM.packFQDN() == '\x00\x041234')
         self.SM.setFQDN('12345')
-        self.failUnless( self.SM.packFQDN() == '\x00\x0512345\x00\x00\x00')
+        self.assertTrue( self.SM.packFQDN() == '\x00\x0512345\x00\x00\x00')
 
     def testpackTLV(self):
-        self.failUnless( packTLV((1, 2), '1234') ==
+        self.assertTrue( packTLV((1, 2), '1234') ==
                          '\x01\x02\x00\x041234\x00\x00\x00\x00')
-        self.failUnless( packTLV((255, 3), '12345') ==
+        self.assertTrue( packTLV((255, 3), '12345') ==
                          '\xff\x03\x00\x0512345\x00\x00\x00')
 
     def testunpackTLV(self):
-        self.failUnless( unpackTLV(packTLV((1,2),'1234')) ==
+        self.assertTrue( unpackTLV(packTLV((1,2),'1234')) ==
                          ((1, 2), '1234', '') )
-        self.failUnless( unpackTLV(packTLV((1,2),'1234')+'xxxx') ==
+        self.assertTrue( unpackTLV(packTLV((1,2),'1234')+'xxxx') ==
                          ((1, 2), '1234', 'xxxx') )
 
     def testpackTLVC(self):
-        self.failUnless( packTLVC(0x102, '12') ==
+        self.assertTrue( packTLVC(0x102, '12') ==
                          '\x81\x0212')
-        self.failUnless( packTLVC(0x103, '12345') ==
+        self.assertTrue( packTLVC(0x103, '12345') ==
                          '\x01\x03\x00\x0512345')
 
     def testunpackTLVC(self):
-        self.failUnless( unpackTLVC(packTLVC(0x102, '12') + 'xxxx') ==
+        self.assertTrue( unpackTLVC(packTLVC(0x102, '12') + 'xxxx') ==
                          (0x102, '12', 'xxxx') )
-        self.failUnless( unpackTLVC(packTLVC(0x102, '12345') + 'xxxx') ==
+        self.assertTrue( unpackTLVC(packTLVC(0x102, '12345') + 'xxxx') ==
                          (0x102, '12345', 'xxxx') )
 
     def testpackLV(self):
-        self.failUnless( packLV('1234') ==
+        self.assertTrue( packLV('1234') ==
                          '\x00\x041234')
-        self.failUnless( packLV('12345') ==
+        self.assertTrue( packLV('12345') ==
                          '\x00\x0512345\x00\x00\x00')
 
     def testunpackLV(self):
-        self.failUnless( unpackLV(packLV('1234') + 'xxxx') ==
+        self.assertTrue( unpackLV(packLV('1234') + 'xxxx') ==
                          ('1234', 'xxxx') )
-        self.failUnless( unpackLV(packLV('12345') + 'xxxx') ==
+        self.assertTrue( unpackLV(packLV('12345') + 'xxxx') ==
                          ('12345', 'xxxx') )
 
 
     def packetIntegTest(self, result):
         (h, rest) = unpackHeader(result, junk())
         #print len(result), hexlify(result)
-        print
-        print hexlify(result[:HIP_HEADER_LEN]), h.fqdn
+        print()
+        print(hexlify(result[:HIP_HEADER_LEN]), h.fqdn)
         for i in range(0, len(rest), 32):
-            print '%4d' % i, hexlify(rest[i:i+32])
+            print('%4d' % i, hexlify(rest[i:i+32]))
                        
-        print
-        print repr(h.__dict__)
-        print 'type is', HIP_Packets[h.type]
+        print()
+        print(repr(h.__dict__))
+        print('type is', HIP_Packets[h.type])
         n = 0
         b = 0
         l=[]
@@ -102,7 +102,7 @@ class HIPTests(unittest.TestCase):
                     lambda x: I1.unpackEncrypted(self.SM, x)),
                    ]
             try:
-                v2 = apply([x[1] for x in ops if x[0] == (t)][0], [v])
+                v2 = [x[1] for x in ops if x[0] == (t)][0](*[v])
             except IndexError:
                 v2 = hexlify(v)
             l.append((t, v2))
@@ -115,9 +115,9 @@ class HIPTests(unittest.TestCase):
                 v2 += ']'
             else:
                 v2=v
-            print HIP_RECs[t], repr(v2)
-        print h.length, h.rcount, b, n
-        if len(filter(lambda x: x[:2] == (HIP_RR_SIG, 0), l)):
+            print(HIP_RECs[t], repr(v2))
+        print(h.length, h.rcount, b, n)
+        if len([x for x in l if x[:2] == (HIP_RR_SIG, 0)]):
             ver = verifypacket(result, self.SM.HI)
             # excessive, I know, but hey, signature checks are cheap
             # have to miss the padding after the signature,
@@ -130,10 +130,10 @@ class HIPTests(unittest.TestCase):
                     break
                 ver = verifypacket(r2, self.SM.HI)
                 assert( ver == 0 )
-        print
+        print()
 
-        self.failUnless( b <= h.length<<3 )
-        self.failUnless( n == h.rcount )
+        self.assertTrue( b <= h.length<<3 )
+        self.assertTrue( n == h.rcount )
 
 
 
@@ -143,8 +143,8 @@ class HIPTests(unittest.TestCase):
         self.packetIntegTest(result)
 
     def testExistsR1(self):
-        self.failUnless( R1 )
-        self.failUnless( R1.code == 2 )
+        self.assertTrue( R1 )
+        self.assertTrue( R1.code == 2 )
 
     def testPackR1(self):
         # precompute this
@@ -155,8 +155,8 @@ class HIPTests(unittest.TestCase):
 
 
     def testExistsI2(self):
-        self.failUnless( I2 )
-        self.failUnless( I2.code == 3 )
+        self.assertTrue( I2 )
+        self.assertTrue( I2.code == 3 )
 
     def testPackI2(self):
         # precompute this
@@ -174,8 +174,8 @@ class HIPTests(unittest.TestCase):
 
 
     def testExistsR2(self):
-        self.failUnless( R2 )
-        self.failUnless( R2.code == 4 )
+        self.assertTrue( R2 )
+        self.assertTrue( R2.code == 4 )
 
     def testPackR2(self):
         # precompute this
@@ -192,8 +192,8 @@ class HIPTests(unittest.TestCase):
 
 
     def testExistsREA(self):
-        self.failUnless( REA )
-        self.failUnless( REA.code == 6 )
+        self.assertTrue( REA )
+        self.assertTrue( REA.code == 6 )
 
 ##    def testPackREA(self):
 ##        # precompute this
@@ -220,16 +220,16 @@ class HIPTests(unittest.TestCase):
 ##        self.failUnless( dontfail )
 
     def testExistsBOS(self):
-        self.failUnless( BOS )
-        self.failUnless( BOS.code == 10 )
+        self.assertTrue( BOS )
+        self.assertTrue( BOS.code == 10 )
 
     def testPackBOS(self):
         result = BOS.pack(self.SM)
         self.packetIntegTest(result)
 
     def testExistsNES(self):
-        self.failUnless( NES )
-        self.failUnless( NES.code == 5 )
+        self.assertTrue( NES )
+        self.assertTrue( NES.code == 5 )
 
 ##    def testPackNES(self):
 ##        # precompute this

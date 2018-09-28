@@ -64,14 +64,14 @@ error = "sstruct.error"
 def pack(format, object):
 	formatstring, names = _getformat(format)
 	elements = []
-	if type(object) is not types.DictType:
+	if type(object) is not dict:
 		object = object.__dict__
 	for name in names:
 		elements.append(object[name])
 	try:
-		data = apply(struct.pack, (formatstring,) + tuple(elements))
+		data = struct.pack(*(formatstring,) + tuple(elements))
 	except:
-		print 'Bang:', formatstring, elements
+		print('Bang:', formatstring, elements)
 		raise
 	return data
 
@@ -79,7 +79,7 @@ def unpack(format, data, object=None):
 	if object is None:
 		object = {}
 	formatstring, names = _getformat(format)
-	if type(object) is types.DictType:
+	if type(object) is dict:
 		dict = object
 	else:
 		dict = object.__dict__
@@ -128,12 +128,12 @@ def _getformat(format):
 			m = _extraRE.match(line)
 			if m:
 				formatchar = m.group(1)
-				if formatchar <> 'x' and formatstring:
-					raise error, "a special format char must be first"
+				if formatchar != 'x' and formatstring:
+					raise error("a special format char must be first")
 			else:
 				m = _elementRE.match(line)
 				if not m:
-					raise error, "syntax error in format: '%s'" % line
+					raise error("syntax error in format: '%s'" % line)
 				names.append(m.group(1))
 				formatchar = m.group(2)
 			formatstring = formatstring + formatchar
@@ -154,7 +154,7 @@ def _test():
 		afloat: f; adouble: d	# multiple "statements" are allowed
 	"""
 	
-	print 'size:', calcsize(format)
+	print('size:', calcsize(format))
 	
 	class foo:
 		pass
@@ -170,11 +170,11 @@ def _test():
 	i.adouble = 0.5
 	
 	data = pack(format, i)
-	print 'data:', `data`
-	print unpack(format, data)
+	print('data:', repr(data))
+	print(unpack(format, data))
 	i2 = foo()
 	unpack(format, data, i2)
-	print vars(i2)
+	print(vars(i2))
 
 if __name__ == "__main__":
 	_test()

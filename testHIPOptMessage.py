@@ -4,7 +4,7 @@ except ImportError:
     pass
 
 import unittest
-import Queue 
+import queue 
 from HIPState import *
 from HIPOptMessage import *
 import HIPCookie
@@ -55,44 +55,44 @@ class HIPOptMessageTests(unittest.TestCase):
 
     def testFQDN(self):
         self.SM.setFQDN('1234')
-        self.failUnless( self.SM.packFQDN() == '\x00\x041234')
+        self.assertTrue( self.SM.packFQDN() == '\x00\x041234')
         self.SM.setFQDN('12345')
-        self.failUnless( self.SM.packFQDN() == '\x00\x0512345\x00\x00\x00')
+        self.assertTrue( self.SM.packFQDN() == '\x00\x0512345\x00\x00\x00')
 
     def testpackTLV(self):
-        self.failUnless( packTLV(0xabcd, '1234') ==
+        self.assertTrue( packTLV(0xabcd, '1234') ==
                          '\xab\xcd\x00\x041234')
-        self.failUnless( packTLV(0xabcd, '12345') ==
+        self.assertTrue( packTLV(0xabcd, '12345') ==
                          '\xab\xcd\x00\x0512345\x00\x00\x00\x00\x00\x00\x00')
 
     def testunpackTLV(self):
-        self.failUnless( unpackTLV(packTLV(0xabcd,'1234')) ==
+        self.assertTrue( unpackTLV(packTLV(0xabcd,'1234')) ==
                          (0xabcd, '1234', '') )
-        self.failUnless( unpackTLV(packTLV(0xabcd,'1234')+'xxxx') ==
+        self.assertTrue( unpackTLV(packTLV(0xabcd,'1234')+'xxxx') ==
                          (0xabcd, '1234', 'xxxx') )
 
     def testpackTLVC(self):
-        self.failUnless( packTLVC(0x102, '12') ==
+        self.assertTrue( packTLVC(0x102, '12') ==
                          '\x81\x0212')
-        self.failUnless( packTLVC(0x103, '12345') ==
+        self.assertTrue( packTLVC(0x103, '12345') ==
                          '\x01\x03\x00\x0512345')
 
     def testunpackTLVC(self):
-        self.failUnless( unpackTLVC(packTLVC(0x102, '12') + 'xxxx') ==
+        self.assertTrue( unpackTLVC(packTLVC(0x102, '12') + 'xxxx') ==
                          (0x102, '12', 'xxxx') )
-        self.failUnless( unpackTLVC(packTLVC(0x102, '12345') + 'xxxx') ==
+        self.assertTrue( unpackTLVC(packTLVC(0x102, '12345') + 'xxxx') ==
                          (0x102, '12345', 'xxxx') )
 
     def testpackLV(self):
-        self.failUnless( packLV('1234') ==
+        self.assertTrue( packLV('1234') ==
                          '\x00\x041234')
-        self.failUnless( packLV('12345') ==
+        self.assertTrue( packLV('12345') ==
                          '\x00\x0512345\x00\x00\x00')
 
     def testunpackLV(self):
-        self.failUnless( unpackLV(packLV('1234') + 'xxxx') ==
+        self.assertTrue( unpackLV(packLV('1234') + 'xxxx') ==
                          ('1234', 'xxxx') )
-        self.failUnless( unpackLV(packLV('12345') + 'xxxx') ==
+        self.assertTrue( unpackLV(packLV('12345') + 'xxxx') ==
                          ('12345', 'xxxx') )
 
     def testHIPHeader(self):
@@ -102,27 +102,27 @@ class HIPOptMessageTests(unittest.TestCase):
                    sourceHIT=self.SM.localHIT,
                    remoteHIT=self.SM.remoteHIT)
         s = h.pack()
-        self.failUnless( len(s) == HIP_HEADER_LEN )
+        self.assertTrue( len(s) == HIP_HEADER_LEN )
         h2 = HIPHeader(string=s)
-        self.failUnless( h2.len == 0xf3 )
-        self.failUnless( h2.type == 1 )
-        self.failUnless( h2.control == 0 )
-        self.failUnless( h2.sourceHIT == self.SM.localHIT )
-        self.failUnless( h2.remoteHIT == self.SM.remoteHIT )
+        self.assertTrue( h2.len == 0xf3 )
+        self.assertTrue( h2.type == 1 )
+        self.assertTrue( h2.control == 0 )
+        self.assertTrue( h2.sourceHIT == self.SM.localHIT )
+        self.assertTrue( h2.remoteHIT == self.SM.remoteHIT )
 
     def testHIPRec(self):
         # test basic record class
         r = HIPRec(type = 1, name = 'Test', format = "!\nRes: B", Res=0x3e)
         s = HIPRec(type = 1, name = 'Test2', format = "!\nRes: B", Res=0x3e)
-        self.failUnless( str(r) == 'Test' )
-        self.failUnless( r == s )
+        self.assertTrue( str(r) == 'Test' )
+        self.assertTrue( r == s )
         x = {r: 1}
-        self.failUnless( x[s] == 1 )
-        self.failUnless( r.pack() == '\x00\x01\x00\x01\x3e\x00\x00\x00' )
-        self.failUnless( r.pack() == s.pack() )
+        self.assertTrue( x[s] == 1 )
+        self.assertTrue( r.pack() == '\x00\x01\x00\x01\x3e\x00\x00\x00' )
+        self.assertTrue( r.pack() == s.pack() )
         r = HIP_REC_SPI_LSI(SPI=1234, LSI=12345678)
         s = HIPRec().unpack(r.pack())
-        self.failUnless( s[1].LSI == r.LSI )
+        self.assertTrue( s[1].LSI == r.LSI )
 
     def testHIP_REC_DH_FULL(self):
         # unique encoding
@@ -131,8 +131,8 @@ class HIPOptMessageTests(unittest.TestCase):
                             Generator=unhexlify('87654321'),
                             Public=unhexlify('122178876776'))
         s = HIPRec().unpack(r.pack() + '\xff')
-        self.failUnless( s[1].pack() == r.pack() )
-        self.failUnless( s[1].Public == r.Public )
+        self.assertTrue( s[1].pack() == r.pack() )
+        self.assertTrue( s[1].Public == r.Public )
 
     def testHIP_REC_HI_FQDN(self):
         # unique encoding
@@ -140,27 +140,27 @@ class HIPOptMessageTests(unittest.TestCase):
                             Identity=unhexlify('12345678'),
                             FQDN='www.test.co.nz')
         s = HIPRec().unpack(r.pack() + '\xff')
-        self.failUnless( s[1].pack() == r.pack() )
-        self.failUnless( s[1].FQDN == r.FQDN )
+        self.assertTrue( s[1].pack() == r.pack() )
+        self.assertTrue( s[1].FQDN == r.FQDN )
 
     def testHIP_REC_DH(self):
         # tests all HIPIdVal based types
         r = HIP_REC_DH(GroupID=129,
                        Public=unhexlify('122178876776'))
         s = HIPRec().unpack(r.pack() + '\xff')
-        self.failUnless( s[1].pack() == r.pack() )
-        self.failUnless( s[1].Public == r.Public )
+        self.assertTrue( s[1].pack() == r.pack() )
+        self.assertTrue( s[1].Public == r.Public )
 
     def testHIP_REC_HIP_TRANSFORM(self):
         # actually tests all transforms
         r = HIP_REC_HIP_TRANSFORM(HIPXfrm=[ENCR_AES_128, ENCR_3DES])
         s = HIPRec().unpack(r.pack() + '\xff')
-        self.failUnless( s[1].pack() == r.pack() )
+        self.assertTrue( s[1].pack() == r.pack() )
 
     def testHIP_REC_HMAC(self):
         r = HIP_REC_HMAC(HMAC='12345678901234567890')
         s = HIPRec().unpack(r.pack() + '\xff')
-        self.failUnless( s[1].pack() == r.pack() )
+        self.assertTrue( s[1].pack() == r.pack() )
 
     def testHIP_REC_REA_INFO(self):
         r = HIP_REC_REA_INFO(Interface=2,
@@ -171,24 +171,24 @@ class HIPOptMessageTests(unittest.TestCase):
                              REAID=123,
                              KeyInd=512)
         s = HIPRec().unpack(r.pack() + '\xff')
-        self.failUnless( s[1].pack() == r.pack() )
+        self.assertTrue( s[1].pack() == r.pack() )
 
     def testHIP_REC_ENCRYPTED(self):
         r = HIP_REC_ENCRYPTED(Encrypted=unhexlify('122178876776'))
         s = HIPRec().unpack(r.pack() + '\xff')
-        self.failUnless( s[1].pack() == r.pack() )
-        self.failUnless( s[1].Encrypted == r.Encrypted )
+        self.assertTrue( s[1].pack() == r.pack() )
+        self.assertTrue( s[1].Encrypted == r.Encrypted )
 
     def packetIntegTest(self, result):
         (h, rest) = (HIPHeader(string=result), result[HIPHeader.size:])
         #print len(result), hexlify(result)
-        print
-        print hexlify(result[:HIP_HEADER_LEN])
+        print()
+        print(hexlify(result[:HIP_HEADER_LEN]))
         for i in range(0, len(rest), 32):
-            print '%4d' % i, hexlify(rest[i:i+32])
+            print('%4d' % i, hexlify(rest[i:i+32]))
                        
-        print
-        print 'type is', HIP_Packets[h.type]
+        print()
+        print('type is', HIP_Packets[h.type])
         if h.type in [1, 64]: return
         n = 0
         b = 0
@@ -197,9 +197,9 @@ class HIPOptMessageTests(unittest.TestCase):
             n += 1
             (t, v, rest) = HIPRec().unpack(rest)
             l.append(v)
-            print str(v), '\n ', '\n  '.join(map(lambda x,y: ' = '.join([x,y]),
-                                       v.__dict__.keys(),
-                                       map(hexorrep, v.__dict__.values())))
+            print(str(v), '\n ', '\n  '.join(map(lambda x,y: ' = '.join([x,y]),
+                                       list(v.__dict__.keys()),
+                                       list(map(hexorrep, list(v.__dict__.values()))))))
         if [x in l for x in [HIP_REC_SIG, HIP_REC_SIG2]]:
             sigrec = [x for x in l if x.name[:3] == 'SIG'][0]
             ver = verifypacket(result, self.SM.HI, sigrec, h)
@@ -214,7 +214,7 @@ class HIPOptMessageTests(unittest.TestCase):
 ##                    break
 ##                ver = verifypacket(r2, self.SM.HI, sigrec, h)
 ##                assert( ver == 0 )
-        print
+        print()
 
     def testPackI1(self):
         self.SM.localHIT = '\xab\xcd\xab\xcd\xab\xcd\xab\xcd'
@@ -253,8 +253,8 @@ class HIPOptMessageTests(unittest.TestCase):
 
 
     def testExistsREA(self):
-        self.failUnless( REA )
-        self.failUnless( REA.code == 6 )
+        self.assertTrue( REA )
+        self.assertTrue( REA.code == 6 )
 
     def testPackREA(self):
         class dummyESP:
@@ -278,16 +278,16 @@ class HIPOptMessageTests(unittest.TestCase):
         self.packetIntegTest(result)
 
     def testExistsBOS(self):
-        self.failUnless( BOS )
-        self.failUnless( BOS.code == 7 )
+        self.assertTrue( BOS )
+        self.assertTrue( BOS.code == 7 )
 
     def testPackBOS(self):
         result = BOS.pack(self.SM)
         self.packetIntegTest(result)
 
     def testExistsNES(self):
-        self.failUnless( NES )
-        self.failUnless( NES.code == 5 )
+        self.assertTrue( NES )
+        self.assertTrue( NES.code == 5 )
 
     def testPackNES(self):
         class dummyESP:

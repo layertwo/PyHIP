@@ -35,15 +35,15 @@ class SPITests(unittest.TestCase):
         if self.authkey:
             p1 = '\xff' + p[1:]
             #print 'now:', hexlify(p1)
-            self.failUnlessRaises( ESPUnpackError, self.deSPI.unpack, p1 )
+            self.assertRaises( ESPUnpackError, self.deSPI.unpack, p1 )
             p2 = p[:-21] + '\xff' + p[-20:]
             #print 'and:', hexlify(p2)
-            self.failUnlessRaises( ESPUnpackError, self.deSPI.unpack, p2 )
+            self.assertRaises( ESPUnpackError, self.deSPI.unpack, p2 )
         # now test that IV's work
         p2 = self.SPI.pack(99,s)
-        assert( p <> p2 )
+        assert( p != p2 )
         p3 = self.SPI.pack(99,s)
-        assert( p2 <> p3 )
+        assert( p2 != p3 )
         
     def testUnpack3DES(self):
         self.iv=self.iv[:8]

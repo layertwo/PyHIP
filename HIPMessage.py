@@ -3,6 +3,7 @@ from types import *
 from struct import *
 import string
 from array import array
+from functools import reduce
 
 LARGE=pow(2,31)-1
 from M2Crypto import DH, EVP, Rand, DSA
@@ -197,8 +198,7 @@ def signpacket(head, tail, hi):
     testsig = packTLV(HIP_REC_SIG, ''.join(['x'] * hi.siglen))
     headlist[1] = (len(head) + len(tail) + len(testsig) - HIP_HEADER_LEN)>>3
     headlist[5] += 1
-    newhead = apply(pack,
-                    (HIP_HEADER_FMT,)
+    newhead = pack(*(HIP_HEADER_FMT,)
                     + tuple(headlist)) + head[HIP_HEADER_LEN:]
     sdata = ''.join([newhead, tail, testsig])
     sig = packTLV(HIP_REC_SIG, hi.sign(sdata[:-hi.sigpadlen]))
@@ -212,13 +212,13 @@ def packetDump(packet):
     (dict, rest) = unpackHeader(packet, Junkme())
     (nexthdr, paylen, type, magic, hit, rcount, fqdn) = [getattr(dict,x) for x in     ('nh', 'length', 'type', 'magic', 'hit', 'rcount', 'fqdn')]
     #print len(packet), hexlify(packet)
-    print
-    print hexlify(packet[:HIP_HEADER_LEN]), fqdn
+    print()
+    print(hexlify(packet[:HIP_HEADER_LEN]), fqdn)
     for i in range(0, len(rest), 32):
-        print '%4d' % i, hexlify(rest[i:i+32])
+        print('%4d' % i, hexlify(rest[i:i+32]))
 
-    print
-    print repr((nexthdr, paylen, HIP_Packets[type], magic, hit, rcount, len(rest)))
+    print()
+    print(repr((nexthdr, paylen, HIP_Packets[type], magic, hit, rcount, len(rest))))
     n = 0
     b = 0
     l=[]
@@ -230,19 +230,19 @@ def packetDump(packet):
                (HIP_REC_ENCRYPTED, hexlify),
                ]
         try:
-            v2 = apply([x[1] for x in ops if x[0] == t][0], [v])
+            v2 = [x[1] for x in ops if x[0] == t][0](*[v])
         except IndexError:
             v2 = hexlify(v)
         l.append((t, v2))
         b += len(v) + 4
     for (t, v) in l:
-        print HIP_RECs[t], repr(v)
-    print paylen, rcount, b, n
+        print(HIP_RECs[t], repr(v))
+    print(paylen, rcount, b, n)
 
 def packXfrm(type, list):
     def packXfrmEl(x, i, n):
         (t, a)=x
-        if a <> 0:
+        if a != 0:
             s=packTLVC(XFRM_SA_AUTH_ALG,a)
         else:
             s=''
@@ -250,10 +250,10 @@ def packXfrm(type, list):
         plen = len(s) + 4
         s2 = ''.join([pack('!BxHBBxx', nxt, plen, i, t), s])
         return s2
-    return reduce(operator.add, map(packXfrmEl,
+    return reduce(operator.add, list(map(packXfrmEl,
                                     list,
-                                    range(1,len(list)+1),
-                                    [type] * (len(list)-1) + [0]))
+                                    list(range(1,len(list)+1)),
+                                    [type] * (len(list)-1) + [0])))
 
 def unpackXfrm(payload):
     pl=payload
@@ -277,7 +277,7 @@ def unpackXfrm(payload):
                 
 def packRRset(RRset):
     #pprint(RRset)
-    tail = reduce(operator.add, [apply(packTLV, RR) for RR in RRset])
+    tail = reduce(operator.add, [packTLV(*RR) for RR in RRset])
     return tail
 
 def extractRRset(RRset, t):
@@ -323,7 +323,7 @@ class Message:
       return RR
 
   def unpackDH(self, machine, RR, hit1, hit2, mode):
-      if RR[:5] <> '\x02\x00\xff\x02\x00':
+      if RR[:5] != '\x02\x00\xff\x02\x00':
           raise ValueError
       (p, rest) = unpackLV(RR[5:])
       (g, rest) = unpackLV(rest)
@@ -387,7 +387,7 @@ class Message:
                  (HIP_REC_ESP_TRANSFORM, unpackXfrm),
                  ]
           try:
-              v = apply([x[1] for x in ops if x[0] == t][0], [v])
+              v = [x[1] for x in ops if x[0] == t][0](*[v])
           except IndexError:
               pass
           l.append((t, v))
@@ -406,10 +406,10 @@ class I1Message(Message):
         head = packHeader(0, len(tail), self.code, 1, machine.localHIT, machine.packFQDN())
         return head + tail
     def input(self, machine, header, RRset):
-        if extractRRset(RRset, HIP_REC_KEY) <> machine.localHIT:
-            raise HIPUnpackError, 'Not local HIT'
-        if hasattr(machine, 'remoteHIT') and header.hit <> machine.remoteHIT:
-            raise HIPNewConnection, header.hit
+        if extractRRset(RRset, HIP_REC_KEY) != machine.localHIT:
+            raise HIPUnpackError('Not local HIT')
+        if hasattr(machine, 'remoteHIT') and header.hit != machine.remoteHIT:
+            raise HIPNewConnection(header.hit)
         machine.remoteHIT=header.hit
         return 1
         
@@ -453,7 +453,7 @@ class R1Message(Message):
         machine.Cookie.stored = bod.cookie.pop()
         remoteBirthday = unpack('!L', bod.birthday.pop())[0]
         if hasattr(machine,'remoteBirthday'):
-            if machine.remoteBirthday <> remoteBirthday:
+            if machine.remoteBirthday != remoteBirthday:
                 # it rebooted, bang it on the head
                 # not right.
                 #machine.send(I2)
@@ -468,11 +468,11 @@ class R1Message(Message):
                                for x in bod.ESPXfrmList.pop()
                                if x[1] in machine.ESPXfrmList][0]
         except IndexError:
-            raise HIPUnpackError, 'Remote requested unsupported transform'
+            raise HIPUnpackError('Remote requested unsupported transform')
         # allocate LSI
-        machine.remoteLSI = pack('!L', StateMachine.LSIgen.next())
+        machine.remoteLSI = pack('!L', next(StateMachine.LSIgen))
         # allocate SPI
-        machine.remoteSPI = pack('!L', StateMachine.SPIgen.next())
+        machine.remoteSPI = pack('!L', next(StateMachine.SPIgen))
         # Extract HIP keymat.  We're initiator.
         machine.keygenerator=self.unpackDH(machine,
                                            bod.keylist.pop(0),
@@ -481,21 +481,21 @@ class R1Message(Message):
                                            1)
         kl = machine.hipXfrmKeyLens[machine.hipXfrm]
         machine.hipkey = ''.join(map(apply,
-                                     [machine.keygenerator.next]*kl))
+                                     [machine.keygenerator.__next__]*kl))
         machine.remotehipkey = ''.join(map(apply,
-                                           [machine.keygenerator.next]*kl))
+                                           [machine.keygenerator.__next__]*kl))
         # extract ESP keys and set up SA
         machine.ESPalg = machine.ESPalgTags[machine.ESPXfrm]
         (alg, keylen, blocksize,
          authalg, authkeylen, authlen) = ESP.ESPAlgTable[machine.ESPalg]
         machine.ESPkey = ''.join(map(apply,
-                                     [machine.keygenerator.next]*keylen))
+                                     [machine.keygenerator.__next__]*keylen))
         machine.ESPauthkey = ''.join(map(apply,
-                                         [machine.keygenerator.next]*authkeylen))
+                                         [machine.keygenerator.__next__]*authkeylen))
         machine.remoteESPkey = ''.join(map(apply,
-                                           [machine.keygenerator.next]*keylen))
+                                           [machine.keygenerator.__next__]*keylen))
         machine.remoteESPauthkey = ''.join(map(apply,
-                                               [machine.keygenerator.next]*authkeylen))
+                                               [machine.keygenerator.__next__]*authkeylen))
         machine.remoteESP = ESP.SPI(SPI=machine.remoteSPI,
                                     key=machine.remoteESPkey,
                                     iv=Rand.rand_bytes(blocksize),
@@ -548,15 +548,15 @@ class I2Message(Message):
                            Body())
         # todo: handle controls
         if hasattr(machine,'remoteBirthday'):
-            if machine.remoteBirthday <> remoteBirthday:
+            if machine.remoteBirthday != remoteBirthday:
                 # it rebooted, bang it on the head
                 # todo
                 pass
-        if machine.remoteHIT <> bod.keylist.pop(0):
+        if machine.remoteHIT != bod.keylist.pop(0):
             # we just got to check this under the sig
-            raise HIPUnpackError, 'remote gave us inconsistent HIT'
+            raise HIPUnpackError('remote gave us inconsistent HIT')
         if not machine.Cookie.check(bod.cookie.pop(0)):
-            raise HIPUnpackError, 'Bad Cookie'
+            raise HIPUnpackError('Bad Cookie')
         # blow up if we don't support initiator's choice
         try:
             machine.hipXfrm = [x[1]
@@ -564,15 +564,15 @@ class I2Message(Message):
                                if x[1] in machine.hipXfrmList][0]
         except IndexError:
             # this isn't right
-            raise HIPUnpackError, 'Remote requested only unsupported transforms'
+            raise HIPUnpackError('Remote requested only unsupported transforms')
         machine.localLSI = bod.lsi.pop()
         machine.localSPI = bod.spi.pop()
         # allocate LSI
-        machine.remoteLSI = pack('!L', StateMachine.LSIgen.next())
+        machine.remoteLSI = pack('!L', next(StateMachine.LSIgen))
         if hasattr(machine, 'LSIcallback') and callable(machine.LSIcallback):
             machine.LSIcallback(machine)
         # allocate SPI
-        machine.remoteSPI = pack('!L', StateMachine.SPIgen.next())
+        machine.remoteSPI = pack('!L', next(StateMachine.SPIgen))
         # extract HIP keymat.  We're rESPonder.
         machine.keygenerator=self.unpackDH(machine,
                                            bod.keylist.pop(0),
@@ -581,9 +581,9 @@ class I2Message(Message):
                                            0)
         kl = machine.hipXfrmKeyLens[machine.hipXfrm]
         machine.remotehipkey = ''.join(map(apply,
-                                           [machine.keygenerator.next]*kl))
+                                           [machine.keygenerator.__next__]*kl))
         machine.hipkey = ''.join(map(apply,
-                                     [machine.keygenerator.next]*kl))
+                                     [machine.keygenerator.__next__]*kl))
         # now unpack the encrypted record
         RRsetToAttrs(self.unpackEncrypted(machine, bod.encrypted.pop()),
                      [(HIP_REC_ESP_TRANSFORM,
@@ -598,19 +598,19 @@ class I2Message(Message):
                                if x[1] in machine.ESPXfrmList][0]
         except IndexError:
             # this isn't right
-            raise HIPUnpackError, 'Remote requested only unsupported transforms'
+            raise HIPUnpackError('Remote requested only unsupported transforms')
         # extract ESP keys and set up SA
         machine.ESPalg = machine.ESPalgTags[machine.ESPXfrm]
         (alg, keylen, blocksize,
          authalg, authkeylen, authlen) = ESP.ESPAlgTable[machine.ESPalg]
         machine.remoteESPkey = ''.join(map(apply,
-                                           [machine.keygenerator.next]*keylen))
+                                           [machine.keygenerator.__next__]*keylen))
         machine.remoteESPauthkey = ''.join(map(apply,
-                                               [machine.keygenerator.next]*authkeylen))
+                                               [machine.keygenerator.__next__]*authkeylen))
         machine.ESPkey = ''.join(map(apply,
-                                     [machine.keygenerator.next]*keylen))
+                                     [machine.keygenerator.__next__]*keylen))
         machine.ESPauthkey = ''.join(map(apply,
-                                         [machine.keygenerator.next]*authkeylen))
+                                         [machine.keygenerator.__next__]*authkeylen))
         machine.remoteESP = ESP.SPI(SPI=machine.remoteSPI,
                                     key=machine.remoteESPkey,
                                     iv=Rand.rand_bytes(blocksize),
@@ -702,7 +702,7 @@ class REAMessage(Message):
                   SPI)]         
         if ID:
             RRset.append((HIP_REC_ID, ID))
-        RRset += map(packA, Alist)
+        RRset += list(map(packA, Alist))
         head = packHeader(0, 0, self.code, len(RRset), machine.localHIT, machine.packFQDN())
         tail = packRRset(RRset)
         return signpacket(head, tail, machine.HI)
@@ -714,7 +714,7 @@ class REAMessage(Message):
                             (HIP_REC_AAAA, 'IP6s')],
                            Body())
         def REASNCallback():
-            print 'SNCallback'
+            print('SNCallback')
             machine.setRemoteIPs(bod.IPs)
         SN = unpack('!L', bod.SN.pop(0))[0]
         machine.localESP.SNCallbacks[SN] = REASNCallback
@@ -730,7 +730,7 @@ class NESMessage(Message):
         # also assume DH key was regenerated elsewhere
         # SN is preincrement
         SN = pack('!L', machine.remoteESP.SN + 1)
-        machine.remoteSPI =  pack('!L', StateMachine.SPIgen.next())
+        machine.remoteSPI =  pack('!L', next(StateMachine.SPIgen))
         RRset = [(HIP_REC_ESP_SN,
                   SN),
                  (HIP_REC_SPI,
@@ -783,16 +783,16 @@ class NESMessage(Message):
         (alg, keylen, blocksize,
          authalg, authkeylen, authlen) = ESP.ESPAlgTable[machine.ESPalg]
         machine.remoteESPkey = ''.join(map(apply,
-                                           [machine.keygenerator.next]
+                                           [machine.keygenerator.__next__]
                                            *keylen))
         machine.remoteESPauthkey = ''.join(map(apply,
-                                               [machine.keygenerator.next]
+                                               [machine.keygenerator.__next__]
                                                *authkeylen))
         machine.ESPkey = ''.join(map(apply,
-                                     [machine.keygenerator.next]
+                                     [machine.keygenerator.__next__]
                                      *keylen))
         machine.ESPauthkey = ''.join(map(apply,
-                                         [machine.keygenerator.next]
+                                         [machine.keygenerator.__next__]
                                          *authkeylen))
         if machine.rekeying:
             # swap the keys

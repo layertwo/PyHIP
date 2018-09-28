@@ -1,4 +1,4 @@
-from __future__ import generators
+
 import threading
 import gc
 import traceback
@@ -19,7 +19,7 @@ from fcntl import ioctl
 from binascii import hexlify, unhexlify
 from array import array
 from pprint import pformat
-import Queue
+import queue
 
 import ESP
 import weakref
@@ -47,7 +47,7 @@ Memoize(IPAddress.IPv6_ntoa)
 class RawSocketIOHandler(object, IPhandler):
     def __init__(self,
                  address):
-        self.OutQueue = Queue.Queue(4)
+        self.OutQueue = queue.Queue(4)
 
     def Writer(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
@@ -77,7 +77,7 @@ class SocketIOHandler(object, IPhandler):
     def __init__(self,
                  address,
                  af=socket.AF_INET):
-        self.OutQueue = Queue.Queue(4)
+        self.OutQueue = queue.Queue(4)
         self.Socket = self.OpenSocket(address, af)
 
     def Reader(self):
@@ -133,12 +133,12 @@ class HIPSocketHandler(SocketIOHandler):
                    address,
                    af=socket.AF_INET):
         sk = socket.socket(af, socket.SOCK_RAW, HIP_PROTO_NO)
-        print self.__class__, 'OpenSocket', address, af, sk
+        print(self.__class__, 'OpenSocket', address, af, sk)
         if address is not None and af == socket.AF_INET:
             try:
                 sk.bind((address, HIP_PROTO_NO))
             except:
-                print "Address was <"+address+'>'
+                print("Address was <"+address+'>')
                 raise
         #sk.setsockopt(0, socket.IP_HDRINCL, 1)
         sk.setblocking(1)
@@ -179,12 +179,12 @@ class HIPSocketHandler(SocketIOHandler):
                 if daddr == '':
                     daddr = self.defaultHandler.localIP_n
                 computed = HIPChecksum(payload, saddr, daddr, HIP_PROTO_NO)
-                if h.csum <> computed:
-                    print "Checksum failure:", h.csum, '<>', computed
+                if h.csum != computed:
+                    print("Checksum failure:", h.csum, '<>', computed)
                 else:
-                    print "Checksum OK"
+                    print("Checksum OK")
             except:
-                print "Checksum not checked"
+                print("Checksum not checked")
                 pass
             self.defaultHandler.inputHIP(addr, payload, h, rest)
         except:
@@ -331,7 +331,7 @@ class TunDeviceHandler(SocketIOHandler):
     
     def AddAlias(self, m):
         m.dev = '%s:%d' % (self.dev,
-                           self.Aliases.next())
+                           next(self.Aliases))
         os.system('/sbin/ifconfig %s %s'
                   % (m.dev,
                      socket.inet_ntoa(struct.pack('!L', m.localLSI))))
@@ -413,7 +413,7 @@ class TunDeviceHandler(SocketIOHandler):
 class NetfilterInputHandler(object, IPhandler):
     def __init__(self, IPv6inside=1, outside=0):
         self.IPv6inside, self.outside = IPv6inside, outside
-        print "NetfilterInputHandler: IPv6inside=%d, outside=%d" % (IPv6inside, outside)
+        print("NetfilterInputHandler: IPv6inside=%d, outside=%d" % (IPv6inside, outside))
         if IPv6inside and not outside:
             self.pf = ipqueue.PF_INET
         else:
@@ -441,7 +441,7 @@ class NetfilterInputHandler(object, IPhandler):
             #print self.__class__, 'Nefilter Queue Handler Receive', hexlify(pkt)
             saddr, daddr, protocol, payload = self.ipinput(pkt)
             if saddr is None:
-                print 'Dropping', IPAddress.IPv6_ntoa(saddr), '->', IPAddress.IPv6_ntoa(daddr), protocol
+                print('Dropping', IPAddress.IPv6_ntoa(saddr), '->', IPAddress.IPv6_ntoa(daddr), protocol)
                 q.set_verdict(p[0], ipqueue.NF_DROP)
             else:
                 #print 'Handling', IPAddress.IPv6_ntoa(saddr), '->', IPAddress.IPv6_ntoa(daddr), protocol
@@ -512,12 +512,12 @@ class NetfilterInputHandler(object, IPhandler):
             self.sendHandler.OutQueue.put((stack, pkt2, nextheader, daddr))
             #return pkt2, ipqueue.NF_REPEAT
             return None, ipqueue.NF_DROP
-        except ESP.ESPUnpackError, x:
-            print 'Unpack error:', x
+        except ESP.ESPUnpackError as x:
+            print('Unpack error:', x)
             return None, ipqueue.NF_DROP
         except KeyError:
             #traceback.print_exc()
-            print 'nope. Not our packet...'
+            print('nope. Not our packet...')
             return None, ipqueue.NF_ACCEPT
         
 ##    def OpenSocket(self, address):
@@ -634,7 +634,7 @@ class NetfilterInputHandler(object, IPhandler):
                 #return pkt, ipqueue.NF_REPEAT
                 return None, ipqueue.NF_DROP
         except (KeyError, ESP.ESPHeld):
-            print 'Error'
+            print('Error')
             return None, ipqueue.NF_ACCEPT
 
 
