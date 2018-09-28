@@ -5,7 +5,7 @@ import struct
 import operator
 from binascii import hexlify
 import types
-import sha
+import hashlib
 import queue
 from Crypto.Util import randpool
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -41,9 +41,7 @@ class Memoize:
 # except ImportError:
 from Utils import *
 
-# IANA defines this as 'any private encryption protocol'
-# which I thought was appropriate for now.
-HIP_PROTO_NO = 99  # FIXME
+HIP_PROTO_NO = 139
 ESP_PROTO_NO = 50
 NO_PROTO = 59
 
@@ -306,16 +304,16 @@ def keymatgen(dhkey, hitlist):
         # yield dhkey
         hitlist.sort()
         i = 1
-        new = sha.new(''.join([dhkey]
-                              + hitlist
-                              + [chr(i)])).digest()
+        sha_hash = hashlib.sha1()
+        sha_hash.update(''.join([dhkey] + hitlist + [chr(i)]))
+        new = sha_hash.digest()
         print('Keymat:', hexlify(new))
         yield new
         while True:
             i += 1
-            new = sha.new(''.join([dhkey,
-                                   new,
-                                   chr(i)])).digest()
+            sha_hash.update(''.join([dhkey] + hitlist + [chr(i)]))
+            new = sha_hash.digest()
+
             print('Keymat:', hexlify(new))
             yield new
     g = keymatgen1(dhkey, hitlist)

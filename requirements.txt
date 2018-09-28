@@ -1,0 +1,4 @@
+nosetests
+pycrypto
+IPy
+asn1

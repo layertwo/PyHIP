@@ -2,24 +2,13 @@
 #import m2
 from Crypto.PublicKey import DSA
 from Crypto.Util.number import bytes_to_long, long_to_bytes
-import sha
 import struct
+import hashlib
 import binascii
-#import pickle
 import pickle
 import HIPutils
-#from pysnmp import asn1
 import asn1
 
-idDSA = asn1.OBJECTID('1.2.840.10040.4.3')
-
-# try:
-##    import psyco
-# psyco.bind(bytes_to_long)
-# psyco.bind(long_to_bytes)
-# psyco.bind(DSA)
-# except ImportError:
-# pass
 
 
 class error:
@@ -100,100 +89,78 @@ class HI:
     def unpack(self, RR):
         self.unpackDSA(RR[4:])
 
-    def packASN1(self):
-        # yuck what a horrid library!
-        dssParms = ''.join([asn1.INTEGER(x).encode()
-                            for x in [self.dsa.p,
-                                      self.dsa.q,
-                                      self.dsa.g]])
-        keyInfo = ''.join([asn1.SEQUENCE(''.join([idDSA.encode(),
-                                                  asn1.SEQUENCE(dssParms).encode()])).encode(),
-                           asn1.INTEGER(self.dsa.y).encode()])
-        return asn1.SEQUENCE(keyInfo).encode()
+    #def packASN1(self):
+    #    # yuck what a horrid library!
+    #    dssParms = ''.join([asn1.INTEGER(x).encode()
+    #                        for x in [self.dsa.p,
+    #                                  self.dsa.q,
+    #                                  self.dsa.g]])
+    #    keyInfo = ''.join([asn1.SEQUENCE(''.join([idDSA.encode(),
+    #                                              asn1.SEQUENCE(dssParms).encode()])).encode(),
+    #                       asn1.INTEGER(self.dsa.y).encode()])
+    #    return asn1.SEQUENCE(keyInfo).encode()
 
-    def unpackASN1(self, string):
-        # yuck what a horrid library!
-        seq, rest = asn1.decode(string)
-        if rest:
-            raise ValueError('HI: unpack failed')
-        algseq, pubkey = asn1.decode(seq.value)
-        oid, rest = asn1.decode(algseq.value)
-        dssParmseq, junk = asn1.decode(rest)
-        dssParms = dssParmseq.value
-        parms = []
-        while dssParms:
-            p, dssParms = asn1.decode(dssParms)
-            parms.append(p)
-        p, rest = asn1.decode(pubkey)
-        parms.append(p)
-        parms = [x.value for x in parms]
-        p, q, g, y = tuple(parms)
-        self.dsa = DSA.construct([y, g, p, q])
+    #def unpackASN1(self, string):
+    #    # yuck what a horrid library!
+    #    seq, rest = asn1.decode(string)
+    #    if rest:
+    #        raise ValueError('HI: unpack failed')
+    #    algseq, pubkey = asn1.decode(seq.value)
+    #    oid, rest = asn1.decode(algseq.value)
+    #    dssParmseq, junk = asn1.decode(rest)
+    #    dssParms = dssParmseq.value
+    #    parms = []
+    #    while dssParms:
+    #        p, dssParms = asn1.decode(dssParms)
+    #        parms.append(p)
+    #    p, rest = asn1.decode(pubkey)
+    #    parms.append(p)
+    #    parms = [x.value for x in parms]
+    #    p, q, g, y = tuple(parms)
+    #    self.dsa = DSA.construct([y, g, p, q])
 
-    def signRDATA(self, str):
+    def signRDATA(self, string):
         l = len(long_to_bytes(self.dsa.p))
         t = (l - 64) / 8
-        r, s = self.dsa.sign(bytes_to_long(sha.new(str).digest()),
+        sha_hash = hashlib.sha1(str(string).encode('utf-8'))
+        r, s = self.dsa.sign(bytes_to_long(sha_hash.digest()),
                              HIPutils.RandomPool.get_bytes(
             len(long_to_bytes(self.dsa.q)) - 1))
-# print 'HI.sign'
-# print hexlify(long_to_bytes(r)), hexlify(long_to_bytes(s))
-# print hexlify(sha.new(str).digest())
-# print repr(self.dsa.__dict__)
-# print self.dsa.size()
-        # print len(r), hexlify(r), len(s), hexlify(s)
         return ''.join([chr(t), long_to_bytes(r), long_to_bytes(s)])
 
-    def verifyRDATA(self, str, sig):
-        # print 'HI.verify'
-        # print hexlify(sig[1:21]), hexlify(sig[21:])
-        # print hexlify(sha.new(str).digest())
-        # print repr(self.dsa.__dict__)
-        # print self.dsa.size()
-        return self.dsa.verify(bytes_to_long(sha.new(str).digest()),
+    def verifyRDATA(self, string, sig):
+        sha_hash = hashlib.sha1(str(string).encode('utf-8'))
+        return self.dsa.verify(bytes_to_long(sha_hash.digest()),
                                (bytes_to_long(sig[1:21]),
                                 bytes_to_long(sig[21:])))
 
-    def signASN1(self, str):
+    def signASN1(self, string):
+        sha_hash = hashlib.sha1(str(string).encode('utf-8'))
         t = chr((len(long_to_bytes(self.dsa.p)) / 64) - 1)
-        r, s = self.dsa.sign(bytes_to_long(sha.new(str).digest()),
+        r, s = self.dsa.sign(bytes_to_long(sha_hash.digest()),
                              HIPutils.RandomPool.get_bytes(
             len(long_to_bytes(self.dsa.q)) - 1))
-# print 'HI.sign'
-# print binascii.hexlify(long_to_bytes(r)), binascii.hexlify(long_to_bytes(s))
-# print binascii.hexlify(sha.new(str).digest())
-# print repr(self.dsa.__dict__)
-# print self.dsa.size()
-        # print len(r), binascii.hexlify(r), len(s), binascii.hexlify(s)
         sigInfo = ''.join([asn1.INTEGER().encode(r),
                            asn1.INTEGER().encode(s)])
         sig = asn1.SEQUENCE(sigInfo).encode()
-# print repr(sig)
         return sig
 
-#    siglen = 41
-#    sigpadlen = 48
 
-    def verifyASN1(self, str, sig):
-        # print 'HI.verify'
-        # print repr(str), repr(sig)
-        # print binascii.hexlify(sig[1:21]), binascii.hexlify(sig[21:])
-        # print binascii.hexlify(sha.new(str).digest())
-        # print repr(self.dsa.__dict__)
-        # print self.dsa.size()
+    def verifyASN1(self, string, sig):
         seq, rest = asn1.decode(sig)
         if rest:
             raise ValueError('HI: unpack failed')
         r, rest = asn1.decode(seq.value)
         s, rest = asn1.decode(rest)
-        return self.dsa.verify(bytes_to_long(sha.new(str).digest()),
+        sha_hash = hashlib.sha1(str(string).encode('utf-8'))
+        return self.dsa.verify(bytes_to_long(sha_hash.digest()),
                                (r.value, s.value))
 
     sign = signRDATA
     verify = verifyRDATA
 
     def __rawhash__(self):
-        return sha.new(self.pack()).digest()[-16:]
+        return hashlib.sha1(str(self.pack()).encode('utf-8')).digest()[-16:]
 
     def HIT(self, template, mask):
         hash = self.__rawhash__()
@@ -252,7 +219,7 @@ if __name__ == "__main__":
                              hi.dsa.g,
                              hi.dsa.p,
                              hi.dsa.q,
-                             hi.dsa.x], file(filename, 'wb'))
+                             hi.dsa.x], open(filename, 'wb'))
                 print('HIT is', binascii.hexlify(hi.HIT127()))
                 print('RR is', binascii.hexlify(hi.pack()))
                 print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
@@ -262,7 +229,7 @@ if __name__ == "__main__":
             if opt in ('-r', '--read'):
                 filename = val
                 print('Reading HI from', filename)
-                rec = file(filename, 'r').read().strip()
+                rec = open(filename, 'r').read().strip()
                 hi = HI(Rec=binascii.unhexlify(rec))
                 print('HIT is', binascii.hexlify(hi.HIT127()))
                 print('RR is', binascii.hexlify(hi.pack()))
