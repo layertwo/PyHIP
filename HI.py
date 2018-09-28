@@ -46,16 +46,15 @@ class HI:
         g = long_to_bytes(self.dsa.g)
         y = long_to_bytes(self.dsa.y)
         l = len(p)
-        t = int((l - 64) / 8)
-        pad = '\x00' * (l)
-        return ''.join([chr(t), str(q[:l]), pad[:-len(p)], str(p[:l]), pad[:-len(g)], str(g[:l]), pad[:-len(y)], str(y[:l])])
+        t = bytes(int((l - 64) / 8))
+        pad = b'\x00' * (l)
+        return b''.join([t, q[:l], pad[:-len(p)], p[:l], pad[:-len(g)], g[:l], pad[:-len(y)], y[:l]])
 
     def pack(self):
         # RFC2535: 0x0200 flags,
         #          0xff protocol (or IANA HIP value)
         #          0x03 algorithm DSA (mandatory)
-        # TODO confirm this is correct
-        return ''.join(['\x02\x00\xff\x03', self.packDSA()])
+        return b''.join([b'\x02\x00\xff\x03', self.packDSA()])
 
     def unpackDSA(self, string):
         t = (ord(string[0]) * 8 + 64)
@@ -104,7 +103,7 @@ class HI:
     def signRDATA(self, string):
         l = len(long_to_bytes(self.dsa.p))
         t = (l - 64) / 8
-        sha_hash = hashlib.sha1(str(string).encode('utf-8'))
+        sha_hash = hashlib.sha1(string.encode('utf-8'))
         r, s = self.dsa.sign(bytes_to_long(sha_hash.digest()),
                              HIPutils.RandomPool.get_bytes(
             len(long_to_bytes(self.dsa.q)) - 1))
@@ -124,8 +123,7 @@ class HI:
             len(long_to_bytes(self.dsa.q)) - 1))
         sigInfo = ''.join([asn1.INTEGER().encode(r),
                            asn1.INTEGER().encode(s)])
-        sig = asn1.SEQUENCE(sigInfo).encode()
-        return sig
+        return asn1.SEQUENCE(sigInfo).encode()
 
 
     def verifyASN1(self, string, sig):
@@ -142,7 +140,7 @@ class HI:
     verify = verifyRDATA
 
     def __rawhash__(self):
-        return hashlib.sha1(str(self.pack()).encode('utf-8')).digest()[-16:]
+        return hashlib.sha1(self.pack()).digest()[-16:]
 
     def HIT(self, template, mask):
         hash = self.__rawhash__()
@@ -203,7 +201,7 @@ if __name__ == "__main__":
                          hi.dsa.x], open(filename, 'wb'))
             # TODO RR should be bytes on str at this point
             print('HIT is {}'.format(binascii.hexlify(hi.HIT127())))
-            print('RR is {}'.format(hi.pack()))
+            print('RR is {}'.format(binascii.hexlify(hi.pack())))
             print('y = {}, len = {}'.format(hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y))))
             print('p = {}, len = {}'.format(hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p))))
             print('g = {}, len = {}'.format(hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g))))
