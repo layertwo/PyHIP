@@ -2,3 +2,4 @@ nosetests
 pycrypto
 IPy
 asn1
+crytography

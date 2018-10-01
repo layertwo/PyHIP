@@ -1,5 +1,3 @@
-#from M2Crypto import DSA
-#import m2
 from Crypto.PublicKey import DSA
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 import struct
@@ -7,9 +5,10 @@ import hashlib
 import binascii
 import pickle
 import HIPutils
+from cryptography.hazmat.primitives.asymmetric import dsa
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.serialization import load_der_private_key
 import asn1
-
-
 
 class error:
     pass
@@ -25,36 +24,56 @@ class HI:
     def callback(self, *args):
         pass
 
-    def __init__(self, file=None, Rec=None, List=None, Size=512):
+    def __init__(self, file=None, Rec=None, List=None, Size=2048):
+        self.backend = default_backend()
+        self.hit = None
+        self.hit127 = None
+        self.x = None
+        self.y = None
+        self.p = None
+        self.g = None
+        self.q = None
+
         if file:
-            self.dsa = DSA.construct(pickle.load(open(file, 'rb')))
+            self.dsa = load_der_private_key(data=file, password=None, backend=self.backend)
         elif Rec:
             self.unpack(Rec)
         elif List:
             self.dsa = DSA.construct(List)
         else:
-            self.dsa = DSA.generate(Size, HIPutils.RandomPool.get_bytes)
+            self.dsa = dsa.generate_private_key(key_size=Size, backend=self.backend)
+            self.priv_numbers = self.dsa.private_numbers()
+            self.param_numbers = self.priv_numbers.public_numbers.parameter_numbers
+            self.x = self.priv_numbers.x
+            self.y = self.priv_numbers.public_numbers.y
+            self.p = self.param_numbers.p
+            self.g = self.param_numbers.g
+            self.q = self.param_numbers.q
 
+
+    @property
     def genKey(self):
         pass
 
+    @property
     def packDSA(self):
         # RFC2536: t=len(p)/64-1
         # RFC2536: q p g y
-        q = long_to_bytes(self.dsa.q)
-        p = long_to_bytes(self.dsa.p)
-        g = long_to_bytes(self.dsa.g)
-        y = long_to_bytes(self.dsa.y)
+        q = long_to_bytes(self.q)
+        p = long_to_bytes(self.p)
+        g = long_to_bytes(self.g)
+        y = long_to_bytes(self.y)
         l = len(p)
         t = bytes(int((l - 64) / 8))
         pad = b'\x00' * (l)
         return b''.join([t, q[:l], pad[:-len(p)], p[:l], pad[:-len(g)], g[:l], pad[:-len(y)], y[:l]])
 
+    @property
     def pack(self):
         # RFC2535: 0x0200 flags,
         #          0xff protocol (or IANA HIP value)
         #          0x03 algorithm DSA (mandatory)
-        return b''.join([b'\x02\x00\xff\x03', self.packDSA()])
+        return b''.join([b'\x02\x00\xff\x03', self.packDSA])
 
     def unpackDSA(self, string):
         t = (ord(string[0]) * 8 + 64)
@@ -69,36 +88,6 @@ class HI:
 
     def unpack(self, RR):
         self.unpackDSA(RR[4:])
-
-    #def packASN1(self):
-    #    # yuck what a horrid library!
-    #    dssParms = ''.join([asn1.INTEGER(x).encode()
-    #                        for x in [self.dsa.p,
-    #                                  self.dsa.q,
-    #                                  self.dsa.g]])
-    #    keyInfo = ''.join([asn1.SEQUENCE(''.join([idDSA.encode(),
-    #                                              asn1.SEQUENCE(dssParms).encode()])).encode(),
-    #                       asn1.INTEGER(self.dsa.y).encode()])
-    #    return asn1.SEQUENCE(keyInfo).encode()
-
-    #def unpackASN1(self, string):
-    #    # yuck what a horrid library!
-    #    seq, rest = asn1.decode(string)
-    #    if rest:
-    #        raise ValueError('HI: unpack failed')
-    #    algseq, pubkey = asn1.decode(seq.value)
-    #    oid, rest = asn1.decode(algseq.value)
-    #    dssParmseq, junk = asn1.decode(rest)
-    #    dssParms = dssParmseq.value
-    #    parms = []
-    #    while dssParms:
-    #        p, dssParms = asn1.decode(dssParms)
-    #        parms.append(p)
-    #    p, rest = asn1.decode(pubkey)
-    #    parms.append(p)
-    #    parms = [x.value for x in parms]
-    #    p, q, g, y = tuple(parms)
-    #    self.dsa = DSA.construct([y, g, p, q])
 
     def signRDATA(self, string):
         l = len(long_to_bytes(self.dsa.p))
@@ -117,7 +106,7 @@ class HI:
 
     def signASN1(self, string):
         sha_hash = hashlib.sha1(str(string).encode('utf-8'))
-        t = chr((len(long_to_bytes(self.dsa.p)) / 64) - 1)
+        #t = chr((len(long_to_bytes(self.dsa.p)) / 64) - 1)
         r, s = self.dsa.sign(bytes_to_long(sha_hash.digest()),
                              HIPutils.RandomPool.get_bytes(
             len(long_to_bytes(self.dsa.q)) - 1))
@@ -139,27 +128,28 @@ class HI:
     sign = signRDATA
     verify = verifyRDATA
 
+    @property
     def __rawhash__(self):
-        return hashlib.sha1(self.pack()).digest()[-16:]
+        return hashlib.sha1(self.pack).digest()[-16:]
 
     def HIT(self, template, mask):
-        hash = self.__rawhash__()
-        self.hit = struct.pack(*['16B'] + list(map(lambda h, t, m: t | (h & m),
-                                                   struct.unpack('16B', hash),
-                                                   struct.unpack(
-                                                       '16B', template),
-                                                   struct.unpack('16B', mask)
-                                                   )))
+        if self.hit is None:
+            self.hit = struct.pack(*['16B'] + list(map(lambda h, t, m: t | (h & m),
+                                                       struct.unpack('16B', self.__rawhash__),
+                                                       struct.unpack('16B', template),
+                                                       struct.unpack('16B', mask))))
         return self.hit
 
+    @property
     def HIT127(self):
-        self.hit127 = self.HIT(binascii.unhexlify('40000000000000000000000000000000'),
-                               binascii.unhexlify('7fffffffffffffffffffffffffffffff'))
+        if self.hit127 is None:
+            self.hit127 = self.HIT(binascii.unhexlify('40000000000000000000000000000000'),
+                                   binascii.unhexlify('7fffffffffffffffffffffffffffffff'))
         return self.hit127
 
+    @property
     def HITRR(self):
-        return self.HIT127()
-        # return '\x00\x00\xff\x63' + self.HIT127()
+        return self.HIT127
 
     def HIT64(self, HAA):
         # HIT64 with arbitrary HAA
@@ -181,7 +171,6 @@ class HI:
 if __name__ == "__main__":
     def main():
         import argparse
-        import sys
 
         parser = argparse.ArgumentParser()
         parser.add_argument('-w', '--write', help='write HI to file')
@@ -194,39 +183,37 @@ if __name__ == "__main__":
             filename = args.write
             print('Writing new HI to:', filename)
             hi = HI()
-            pickle.dump([hi.dsa.y,
-                         hi.dsa.g,
-                         hi.dsa.p,
-                         hi.dsa.q,
-                         hi.dsa.x], open(filename, 'wb'))
-            # TODO RR should be bytes on str at this point
-            print('HIT is {}'.format(binascii.hexlify(hi.HIT127())))
-            print('RR is {}'.format(binascii.hexlify(hi.pack())))
-            print('y = {}, len = {}'.format(hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y))))
-            print('p = {}, len = {}'.format(hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p))))
-            print('g = {}, len = {}'.format(hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g))))
-            print('q = {}, len = {}'.format(hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q))))
+            pickle.dump([hi.y,
+                         hi.g,
+                         hi.p,
+                         hi.q,
+                         hi.x], open(filename, 'wb'))
+            print('HIT is {}'.format(binascii.hexlify(hi.HIT127)))
+            print('RR is {}'.format(binascii.hexlify(hi.pack)))
+            print('y = {}, len = {}'.format(hex(hi.y), len(long_to_bytes(hi.y))))
+            print('p = {}, len = {}'.format(hex(hi.p), len(long_to_bytes(hi.p))))
+            print('g = {}, len = {}'.format(hex(hi.g), len(long_to_bytes(hi.g))))
+            print('q = {}, len = {}'.format(hex(hi.q), len(long_to_bytes(hi.q))))
 
         if args.read:
-            filename = args.read
-            print('Reading HI from', filename)
-            rec = open(filename, 'rb').read().strip()
-            hi = HI(Rec=binascii.unhexlify(rec))
-            print('HIT is', binascii.hexlify(hi.HIT127()))
-            print('RR is', binascii.hexlify(hi.pack()))
-            print('y = ', hi.dsa.y)
-            print('p = ', hi.dsa.p)
-            print('g = ', hi.dsa.g)
-            print('q = ', hi.dsa.q)
+            print('Reading HI from', args.read)
+            rec = open(args.read, 'rb').read()
+            hi = HI(file=rec)
+            print('HIT is', binascii.hexlify(hi.HIT127))
+            print('RR is', binascii.hexlify(hi.pack))
+            print('y = {}'.format(hi.y))
+            print('p = {}'.format(hi.p))
+            print('g = {}'.format(hi.g))
+            print('q = {}'.format(hi.q))
 
         if args.hostkey:
             print('Reading HI from', args.hostkey)
             hi = HI(args.hostkey)
-            print('HIT is', binascii.hexlify(hi.HIT127()))
-            print('RR is', binascii.hexlify(hi.pack()))
-            print('y = ', hex(hi.dsa.y), len(long_to_bytes(hi.dsa.y)))
-            print('p = ', hex(hi.dsa.p), len(long_to_bytes(hi.dsa.p)))
-            print('g = ', hex(hi.dsa.g), len(long_to_bytes(hi.dsa.g)))
-            print('q = ', hex(hi.dsa.q), len(long_to_bytes(hi.dsa.q)))
+            print('HIT is {}'.format(binascii.hexlify(hi.HIT127)))
+            print('RR is {}'.format(binascii.hexlify(hi.pack)))
+            print('y = {}, len = {}'.format(hex(hi.y), len(long_to_bytes(hi.y))))
+            print('p = {}, len = {}'.format(hex(hi.p), len(long_to_bytes(hi.p))))
+            print('g = {}, len = {}'.format(hex(hi.g), len(long_to_bytes(hi.g))))
+            print('q = {}, len = {}'.format(hex(hi.q), len(long_to_bytes(hi.q))))
 
     main()
