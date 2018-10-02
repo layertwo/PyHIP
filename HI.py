@@ -7,7 +7,7 @@ import pickle
 import HIPutils
 from cryptography.hazmat.primitives.asymmetric import dsa
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.serialization import load_der_private_key
+from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, load_pem_private_key
 import asn1
 
 class error:
@@ -24,7 +24,8 @@ class HI:
     def callback(self, *args):
         pass
 
-    def __init__(self, file=None, Rec=None, List=None, Size=2048):
+    def __init__(self, file=None, List=None, Size=2048):
+        self.dsa = None
         self.backend = default_backend()
         self.hit = None
         self.hit127 = None
@@ -35,21 +36,29 @@ class HI:
         self.q = None
 
         if file:
-            self.dsa = load_der_private_key(data=file, password=None, backend=self.backend)
-        elif Rec:
-            self.unpack(Rec)
+            self.dsa = load_pem_private_key(data=open(file, 'rb').read(), password=None, backend=self.backend)
         elif List:
             self.dsa = DSA.construct(List)
         else:
             self.dsa = dsa.generate_private_key(key_size=Size, backend=self.backend)
-            self.priv_numbers = self.dsa.private_numbers()
-            self.param_numbers = self.priv_numbers.public_numbers.parameter_numbers
-            self.x = self.priv_numbers.x
-            self.y = self.priv_numbers.public_numbers.y
-            self.p = self.param_numbers.p
-            self.g = self.param_numbers.g
-            self.q = self.param_numbers.q
 
+        self.priv_numbers = self.dsa.private_numbers()
+        self.param_numbers = self.priv_numbers.public_numbers.parameter_numbers
+
+        self.x = self.priv_numbers.x
+        self.y = self.priv_numbers.public_numbers.y
+        self.p = self.param_numbers.p
+        self.g = self.param_numbers.g
+        self.q = self.param_numbers.q
+
+    def write(self, filename):
+        if self.dsa is not None:
+            pem = self.dsa.private_bytes(encoding=Encoding.PEM,format=PrivateFormat.TraditionalOpenSSL,
+                                         encryption_algorithm=NoEncryption())
+            with open(filename, 'wb') as f:
+                f.write(pem)
+        else:
+            print('dsa key not generated')
 
     @property
     def genKey(self):
@@ -183,11 +192,7 @@ if __name__ == "__main__":
             filename = args.write
             print('Writing new HI to:', filename)
             hi = HI()
-            pickle.dump([hi.y,
-                         hi.g,
-                         hi.p,
-                         hi.q,
-                         hi.x], open(filename, 'wb'))
+            hi.write(filename)
             print('HIT is {}'.format(binascii.hexlify(hi.HIT127)))
             print('RR is {}'.format(binascii.hexlify(hi.pack)))
             print('y = {}, len = {}'.format(hex(hi.y), len(long_to_bytes(hi.y))))
@@ -197,8 +202,7 @@ if __name__ == "__main__":
 
         if args.read:
             print('Reading HI from', args.read)
-            rec = open(args.read, 'rb').read()
-            hi = HI(file=rec)
+            hi = HI(file=args.read)
             print('HIT is', binascii.hexlify(hi.HIT127))
             print('RR is', binascii.hexlify(hi.pack))
             print('y = {}'.format(hi.y))
